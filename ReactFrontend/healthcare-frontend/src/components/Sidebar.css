@@ -1,0 +1,90 @@
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: linear-gradient(180deg,#162344,#1e293b);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0,0,0,.15);
+}
+
+.logo-section {
+  padding: 24px;
+  text-align: center;
+}
+
+.logo-icon {
+  font-size: 42px;
+  color: #38bdf8;
+}
+
+.logo-section h2 {
+  color: white;
+  margin-top: 10px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.user-info {
+  margin: 15px;
+  padding: 15px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.menu {
+  flex: 1;
+  list-style: none;
+  padding: 10px;
+}
+
+.menu li {
+  margin-bottom: 8px;
+}
+
+.menu a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 13px 15px;
+  border-radius: 12px;
+  transition: .3s;
+}
+
+.menu a:hover {
+  background: rgba(37,99,235,.25);
+  color: white;
+}
+
+.logout-section {
+  padding: 15px;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(220,38,38,.2);
+  color: #f87171;
+  font-weight: 600;
+}
