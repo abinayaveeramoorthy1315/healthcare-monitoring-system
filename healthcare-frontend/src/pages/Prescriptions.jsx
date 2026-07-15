@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import {
+  FaPills, FaPlus, FaTrash, FaTimes, FaSave,
+  FaPrint, FaUserInjured, FaUserMd, FaCalendarCheck,
+  FaClock, FaSearch, FaFileAlt
+} from "react-icons/fa";
 
 function Prescriptions() {
   const [patients, setPatients] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [message, setMessage] = useState({ text: "", type: "" });
+
   const [formData, setFormData] = useState({
-    patientId: "",
-    medicineName: "",
-    dosage: "",
-    duration: "",
-    instructions: ""
+    patientId: "", medicineName: "",
+    dosage: "", duration: "", instructions: ""
   });
-  const [message, setMessage] = useState("");
 
   const role = localStorage.getItem("role");
   const username = localStorage.getItem("username");
@@ -22,13 +28,27 @@ function Prescriptions() {
     loadPrescriptions();
   }, []);
 
+  useEffect(() => {
+    const q = search.toLowerCase();
+    setFiltered(
+      prescriptions.filter(p =>
+        p.patient?.name?.toLowerCase().includes(q) ||
+        p.medicineName?.toLowerCase().includes(q) ||
+        p.doctor?.doctorName?.toLowerCase().includes(q)
+      )
+    );
+  }, [search, prescriptions]);
+
+  const showMsg = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+  };
+
   const loadPatients = async () => {
     try {
       const res = await api.get("/api/patients");
       setPatients(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const loadPrescriptions = async () => {
@@ -36,6 +56,7 @@ function Prescriptions() {
       if (role === "ADMIN") {
         const res = await api.get("/api/prescriptions");
         setPrescriptions(res.data);
+        setFiltered(res.data);
       } else if (role === "DOCTOR") {
         const doctorsRes = await api.get("/api/doctors");
         const doctor = doctorsRes.data.find(d => {
@@ -46,16 +67,19 @@ function Prescriptions() {
         if (doctor) {
           const res = await api.get(`/api/prescriptions/doctor/${doctor.doctorId}`);
           setPrescriptions(res.data);
+          setFiltered(res.data);
         }
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const getCurrentDoctorId = async () => {
-    const doctorsRes = await api.get("/api/doctors");
-    const doctor = doctorsRes.data.find(d => {
+    const res = await api.get("/api/doctors");
+    const doctor = res.data.find(d => {
       const cleaned = d.doctorName?.toLowerCase()
         .replace(/dr\.?\s*/i, "").replace(/\s+/g, "").trim();
       return cleaned === username?.toLowerCase().replace(/\s+/g, "").trim();
@@ -66,13 +90,13 @@ function Prescriptions() {
   const handleSubmit = async () => {
     if (!formData.patientId || !formData.medicineName ||
         !formData.dosage || !formData.duration) {
-      setMessage("❌ எல்லா fields-உம் fill பண்ணுங்க!");
+      showMsg("Please fill all required fields!", "error");
       return;
     }
     try {
       const doctorId = await getCurrentDoctorId();
-      if (!doctorId) {
-        setMessage("❌ Doctor not found!");
+      if (!doctorId && role === "DOCTOR") {
+        showMsg("Doctor profile not found!", "error");
         return;
       }
       await api.post("/api/prescriptions", {
@@ -83,30 +107,26 @@ function Prescriptions() {
         duration: formData.duration,
         instructions: formData.instructions
       });
-      setMessage("✅ Prescription Added!");
+      showMsg("Prescription added successfully!", "success");
       setFormData({
-        patientId: "",
-        medicineName: "",
-        dosage: "",
-        duration: "",
-        instructions: ""
+        patientId: "", medicineName: "",
+        dosage: "", duration: "", instructions: ""
       });
       setShowForm(false);
       loadPrescriptions();
-      setTimeout(() => setMessage(""), 3000);
     } catch (err) {
-      console.error(err);
-      setMessage("❌ Failed!");
+      showMsg("Failed to add prescription!", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete prescription?")) return;
+    if (!window.confirm("Delete this prescription?")) return;
     try {
       await api.delete(`/api/prescriptions/${id}`);
+      showMsg("Prescription deleted!", "success");
       loadPrescriptions();
     } catch (err) {
-      console.error(err);
+      showMsg("Delete failed!", "error");
     }
   };
 
@@ -115,61 +135,73 @@ function Prescriptions() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Prescription</title>
+          <title>Prescription - ${p.patient?.name}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 40px; }
-            .header { text-align: center; border-bottom: 2px solid #1a3c5e; padding-bottom: 20px; margin-bottom: 20px; }
-            .header h1 { color: #1a3c5e; margin: 0; }
-            .header p { color: #666; margin: 5px 0; }
-            .info { display: flex; justify-content: space-between; margin-bottom: 30px; }
-            .info div { font-size: 14px; }
-            .info strong { color: #1a3c5e; }
-            .medicine-box { border: 2px solid #1a3c5e; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-            .medicine-box h3 { color: #1a3c5e; margin: 0 0 15px; }
-            .detail-row { display: flex; margin: 8px 0; font-size: 14px; }
-            .detail-label { font-weight: bold; width: 120px; color: #555; }
-            .footer { margin-top: 60px; text-align: right; border-top: 1px solid #ddd; padding-top: 20px; }
-            .signature { font-style: italic; color: #1a3c5e; font-size: 16px; }
-            @media print { body { margin: 0; } }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 24px; margin-bottom: 28px; }
+            .header h1 { color: #1e40af; font-size: 26px; margin-bottom: 4px; }
+            .header p { color: #64748b; font-size: 13px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+            .info-box { background: #f8fafc; padding: 16px; border-radius: 8px; }
+            .info-label { font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px; }
+            .info-value { font-size: 15px; font-weight: 600; color: #0f172a; }
+            .rx-box { border: 2px solid #1e40af; border-radius: 12px; padding: 24px; margin-bottom: 28px; }
+            .rx-title { font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+            .rx-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+            .rx-label { font-weight: 600; color: #475569; width: 130px; font-size: 14px; }
+            .rx-value { color: #0f172a; font-size: 14px; flex: 1; }
+            .footer { text-align: right; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+            .doctor-sign { font-size: 18px; font-weight: 700; color: #1e40af; }
+            .disclaimer { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+            @media print { body { padding: 20px; } }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>🏥 HealthCare Medical Center</h1>
-            <p>Patient Monitoring System</p>
+            <h1>HealthCare Medical Center</h1>
+            <p>Smart Healthcare Monitoring System | Patient Prescription</p>
           </div>
-          <div class="info">
-            <div>
-              <strong>Patient:</strong> ${p.patient?.name || "-"}<br/>
-              <strong>Date:</strong> ${p.prescribedDate || new Date().toLocaleDateString()}
+          <div class="info-grid">
+            <div class="info-box">
+              <div class="info-label">PATIENT NAME</div>
+              <div class="info-value">${p.patient?.name || "-"}</div>
             </div>
-            <div>
-              <strong>Doctor:</strong> ${p.doctor?.doctorName || "-"}<br/>
-              <strong>Specialization:</strong> ${p.doctor?.specialization || "-"}
+            <div class="info-box">
+              <div class="info-label">PRESCRIBED BY</div>
+              <div class="info-value">${p.doctor?.doctorName || "-"}</div>
+            </div>
+            <div class="info-box">
+              <div class="info-label">SPECIALIZATION</div>
+              <div class="info-value">${p.doctor?.specialization || "-"}</div>
+            </div>
+            <div class="info-box">
+              <div class="info-label">DATE</div>
+              <div class="info-value">${p.prescribedDate || new Date().toLocaleDateString()}</div>
             </div>
           </div>
-          <div class="medicine-box">
-            <h3>💊 Prescription Details</h3>
-            <div class="detail-row">
-              <span class="detail-label">Medicine:</span>
-              <span>${p.medicineName}</span>
+          <div class="rx-box">
+            <div class="rx-title">Prescription Details</div>
+            <div class="rx-row">
+              <span class="rx-label">Medicine</span>
+              <span class="rx-value">${p.medicineName}</span>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">Dosage:</span>
-              <span>${p.dosage}</span>
+            <div class="rx-row">
+              <span class="rx-label">Dosage</span>
+              <span class="rx-value">${p.dosage}</span>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">Duration:</span>
-              <span>${p.duration}</span>
+            <div class="rx-row">
+              <span class="rx-label">Duration</span>
+              <span class="rx-value">${p.duration}</span>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">Instructions:</span>
-              <span>${p.instructions || "As directed"}</span>
+            <div class="rx-row" style="border-bottom:none">
+              <span class="rx-label">Instructions</span>
+              <span class="rx-value">${p.instructions || "As directed by doctor"}</span>
             </div>
           </div>
           <div class="footer">
-            <p class="signature">Dr. ${p.doctor?.doctorName || "-"}</p>
-            <p style="font-size:12px; color:#888;">This is a computer generated prescription</p>
+            <div class="doctor-sign">${p.doctor?.doctorName || "-"}</div>
+            <div class="disclaimer">This is a computer generated prescription</div>
           </div>
           <script>window.print(); window.close();</script>
         </body>
@@ -179,276 +211,593 @@ function Prescriptions() {
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h2>💊 Prescriptions</h2>
+    <div style={styles.wrapper}>
+
+      {/* ===== HEADER ===== */}
+      <div style={styles.pageHeader}>
+        <div style={styles.headerLeft}>
+          <div style={styles.headerIcon}>
+            <FaPills />
+          </div>
+          <div>
+            <h1 style={styles.pageTitle}>Prescriptions</h1>
+            <p style={styles.pageSubtitle}>
+              {filtered.length} prescription{filtered.length !== 1 ? "s" : ""} found
+            </p>
+          </div>
+        </div>
+
         {(role === "DOCTOR" || role === "ADMIN") && (
           <button
+            style={showForm ? styles.cancelHeaderBtn : styles.addHeaderBtn}
             onClick={() => setShowForm(!showForm)}
-            style={{
-              background: "#1a3c5e",
-              color: "white",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "600"
-            }}
           >
-            + Add Prescription
+            {showForm
+              ? <><FaTimes /> Cancel</>
+              : <><FaPlus /> Add Prescription</>
+            }
           </button>
         )}
       </div>
 
-      {message && (
+      {/* ===== MESSAGE ===== */}
+      {message.text && (
         <div style={{
-          padding: "12px",
-          marginBottom: "16px",
-          background: message.includes("✅") ? "#d4edda" : "#f8d7da",
-          color: message.includes("✅") ? "#155724" : "#721c24",
-          borderRadius: "8px"
+          ...styles.message,
+          background: message.type === "success" ? "#dcfce7" : "#fee2e2",
+          color: message.type === "success" ? "#15803d" : "#dc2626",
+          borderLeft: `4px solid ${message.type === "success" ? "#16a34a" : "#dc2626"}`
         }}>
-          {message}
+          {message.text}
         </div>
       )}
 
-      {/* Add Form */}
+      {/* ===== FORM ===== */}
       {showForm && (role === "DOCTOR" || role === "ADMIN") && (
-        <div style={{
-          background: "white",
-          padding: "24px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-          marginBottom: "24px"
-        }}>
-          <h3 style={{ margin: "0 0 20px", color: "#1a3c5e" }}>
-            📝 New Prescription
-          </h3>
+        <div style={styles.formCard}>
+          <h3 style={styles.formTitle}>New Prescription</h3>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div>
-              <label style={labelStyle}>Select Patient</label>
-              <select
-                value={formData.patientId}
-                onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                style={inputStyle}
-              >
-                <option value="">-- Select Patient --</option>
-                {patients.map(p => (
-                  <option key={p.patientId} value={p.patientId}>{p.name}</option>
-                ))}
-              </select>
+          <div style={styles.formGrid}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Select Patient *</label>
+              <div style={styles.inputWrapper}>
+                <FaUserInjured style={styles.inputIcon} />
+                <select
+                  style={styles.input}
+                  value={formData.patientId}
+                  onChange={e => setFormData({ ...formData, patientId: e.target.value })}
+                >
+                  <option value="">-- Select Patient --</option>
+                  {patients.map(p => (
+                    <option key={p.patientId} value={p.patientId}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label style={labelStyle}>Medicine Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Paracetamol 500mg"
-                value={formData.medicineName}
-                onChange={(e) => setFormData({ ...formData, medicineName: e.target.value })}
-                style={inputStyle}
-              />
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Medicine Name *</label>
+              <div style={styles.inputWrapper}>
+                <FaPills style={styles.inputIcon} />
+                <input
+                  style={styles.input}
+                  type="text"
+                  placeholder="e.g. Paracetamol 500mg"
+                  value={formData.medicineName}
+                  onChange={e => setFormData({ ...formData, medicineName: e.target.value })}
+                />
+              </div>
             </div>
 
-            <div>
-              <label style={labelStyle}>Dosage</label>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Dosage *</label>
               <input
+                style={styles.inputPlain}
                 type="text"
                 placeholder="e.g. 1 tablet twice daily"
                 value={formData.dosage}
-                onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
-                style={inputStyle}
+                onChange={e => setFormData({ ...formData, dosage: e.target.value })}
               />
             </div>
 
-            <div>
-              <label style={labelStyle}>Duration</label>
-              <input
-                type="text"
-                placeholder="e.g. 5 days"
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                style={inputStyle}
-              />
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Duration *</label>
+              <div style={styles.inputWrapper}>
+                <FaClock style={styles.inputIcon} />
+                <input
+                  style={styles.input}
+                  type="text"
+                  placeholder="e.g. 5 days"
+                  value={formData.duration}
+                  onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                />
+              </div>
             </div>
 
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={labelStyle}>Instructions</label>
+            <div style={{ ...styles.formGroup, gridColumn: "1 / -1" }}>
+              <label style={styles.label}>Instructions</label>
               <textarea
+                style={{ ...styles.inputPlain, resize: "vertical", height: "80px" }}
                 placeholder="e.g. Take after food, avoid alcohol..."
                 value={formData.instructions}
-                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                rows={3}
-                style={{ ...inputStyle, resize: "vertical" }}
+                onChange={e => setFormData({ ...formData, instructions: e.target.value })}
               />
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-            <button
-              onClick={() => setShowForm(false)}
-              style={{
-                padding: "10px 20px",
-                background: "#f1f5f9",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "600"
-              }}
-            >
-              Cancel
+          <div style={styles.formActions}>
+            <button style={styles.cancelBtn} onClick={() => setShowForm(false)}>
+              <FaTimes /> Cancel
             </button>
-            <button
-              onClick={handleSubmit}
-              style={{
-                padding: "10px 24px",
-                background: "#1a3c5e",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "600"
-              }}
-            >
-              💾 Save Prescription
+            <button style={styles.saveBtn} onClick={handleSubmit}>
+              <FaSave /> Save Prescription
             </button>
           </div>
         </div>
       )}
 
-      {/* Prescriptions List */}
-      <div style={{ display: "grid", gap: "16px" }}>
-        {prescriptions.length === 0 ? (
-          <div style={{
-            background: "white",
-            padding: "40px",
-            borderRadius: "12px",
-            textAlign: "center",
-            color: "#999"
-          }}>
-            No Prescriptions Found
-          </div>
-        ) : (
-          prescriptions.map(p => (
-            <div
-              key={p.prescriptionId}
-              style={{
-                background: "white",
-                padding: "20px",
-                borderRadius: "12px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                borderLeft: "5px solid #1a3c5e"
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-                    <div>
-                      <span style={{ color: "#888", fontSize: "12px" }}>PATIENT</span>
-                      <p style={{ margin: "2px 0", fontWeight: "700", color: "#1a3c5e" }}>
-                        👤 {p.patient?.name || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#888", fontSize: "12px" }}>DOCTOR</span>
-                      <p style={{ margin: "2px 0", fontWeight: "600" }}>
-                        👨‍⚕️ {p.doctor?.doctorName || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#888", fontSize: "12px" }}>DATE</span>
-                      <p style={{ margin: "2px 0" }}>📅 {p.prescribedDate}</p>
-                    </div>
-                  </div>
+      {/* ===== SEARCH ===== */}
+      <div style={styles.searchBar}>
+        <FaSearch style={styles.searchIcon} />
+        <input
+          style={styles.searchInput}
+          type="text"
+          placeholder="Search by patient, medicine or doctor..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <FaTimes style={styles.clearSearch} onClick={() => setSearch("")} />
+        )}
+      </div>
 
-                  <div style={{
-                    display: "flex",
-                    gap: "24px",
-                    marginTop: "12px",
-                    flexWrap: "wrap"
-                  }}>
-                    <div>
-                      <span style={{ color: "#888", fontSize: "12px" }}>MEDICINE</span>
-                      <p style={{ margin: "2px 0", fontWeight: "600", color: "#059669" }}>
-                        💊 {p.medicineName}
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#888", fontSize: "12px" }}>DOSAGE</span>
-                      <p style={{ margin: "2px 0" }}>🔢 {p.dosage}</p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#888", fontSize: "12px" }}>DURATION</span>
-                      <p style={{ margin: "2px 0" }}>⏱️ {p.duration}</p>
-                    </div>
-                    {p.instructions && (
-                      <div>
-                        <span style={{ color: "#888", fontSize: "12px" }}>INSTRUCTIONS</span>
-                        <p style={{ margin: "2px 0" }}>📋 {p.instructions}</p>
+      {/* ===== LIST ===== */}
+      {loading ? (
+        <div style={styles.loadingState}>
+          <div style={styles.spinner} />
+          <p>Loading prescriptions...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}><FaPills /></div>
+          <h3>No Prescriptions Found</h3>
+          <p>Add your first prescription!</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {filtered.map(p => (
+            <div key={p.prescriptionId} style={styles.prescCard}>
+
+              {/* Top Row */}
+              <div style={styles.prescTop}>
+                <div style={styles.prescLeft}>
+                  <div style={styles.prescIconWrap}>
+                    <FaFileAlt />
+                  </div>
+                  <div>
+                    <div style={styles.prescMeta}>
+                      <div style={styles.metaItem}>
+                        <FaUserInjured style={{ color: "#6366f1", fontSize: "13px" }} />
+                        <span style={styles.metaValue}>{p.patient?.name || "-"}</span>
                       </div>
-                    )}
+                      <span style={styles.metaDivider}>|</span>
+                      <div style={styles.metaItem}>
+                        <FaUserMd style={{ color: "#0ea5e9", fontSize: "13px" }} />
+                        <span style={styles.metaValue}>{p.doctor?.doctorName || "-"}</span>
+                      </div>
+                      <span style={styles.metaDivider}>|</span>
+                      <div style={styles.metaItem}>
+                        <FaCalendarCheck style={{ color: "#94a3b8", fontSize: "12px" }} />
+                        <span style={{ fontSize: "13px", color: "#64748b" }}>
+                          {p.prescribedDate || "N/A"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                <div style={styles.prescActions}>
                   <button
+                    style={styles.printBtn}
                     onClick={() => handlePrint(p)}
-                    style={{
-                      background: "#059669",
-                      color: "white",
-                      border: "none",
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      fontWeight: "600",
-                      fontSize: "13px"
-                    }}
                   >
-                    🖨️ Print
+                    <FaPrint /> Print
                   </button>
                   {(role === "ADMIN" || role === "DOCTOR") && (
                     <button
+                      style={styles.deleteBtn}
                       onClick={() => handleDelete(p.prescriptionId)}
-                      style={{
-                        background: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        fontWeight: "600",
-                        fontSize: "13px"
-                      }}
                     >
-                      Delete
+                      <FaTrash /> Delete
                     </button>
                   )}
                 </div>
               </div>
+
+              {/* Details */}
+              <div style={styles.prescDetails}>
+                <div style={styles.detailItem}>
+                  <span style={styles.detailLabel}>Medicine</span>
+                  <span style={{
+                    ...styles.detailValue,
+                    color: "#0f172a",
+                    fontWeight: "700"
+                  }}>
+                    {p.medicineName}
+                  </span>
+                </div>
+                <div style={styles.detailItem}>
+                  <span style={styles.detailLabel}>Dosage</span>
+                  <span style={styles.detailValue}>{p.dosage}</span>
+                </div>
+                <div style={styles.detailItem}>
+                  <span style={styles.detailLabel}>Duration</span>
+                  <span style={styles.detailValue}>{p.duration}</span>
+                </div>
+                {p.instructions && (
+                  <div style={{ ...styles.detailItem, gridColumn: "1 / -1" }}>
+                    <span style={styles.detailLabel}>Instructions</span>
+                    <span style={{ ...styles.detailValue, color: "#475569" }}>
+                      {p.instructions}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-const labelStyle = {
-  display: "block",
-  fontWeight: "600",
-  marginBottom: "6px",
-  color: "#374151",
-  fontSize: "14px"
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px 14px",
-  border: "1.5px solid #e2e8f0",
-  borderRadius: "8px",
-  fontSize: "14px",
-  boxSizing: "border-box"
+const styles = {
+  wrapper: {
+    padding: "28px 32px",
+    minHeight: "100vh",
+    background: "#f1f5f9",
+    fontFamily: "'Inter', sans-serif"
+  },
+  pageHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px"
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px"
+  },
+  headerIcon: {
+    width: "52px",
+    height: "52px",
+    background: "linear-gradient(135deg, #059669, #10b981)",
+    borderRadius: "14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "22px",
+    color: "white",
+    boxShadow: "0 4px 12px rgba(16,185,129,0.3)"
+  },
+  pageTitle: {
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0f172a",
+    margin: 0
+  },
+  pageSubtitle: {
+    fontSize: "14px",
+    color: "#64748b",
+    margin: "2px 0 0"
+  },
+  addHeaderBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    color: "white",
+    border: "none",
+    padding: "12px 22px",
+    borderRadius: "12px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: "0 4px 12px rgba(37,99,235,0.3)"
+  },
+  cancelHeaderBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#f1f5f9",
+    color: "#475569",
+    border: "1px solid #e2e8f0",
+    padding: "12px 22px",
+    borderRadius: "12px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif"
+  },
+  message: {
+    padding: "14px 18px",
+    borderRadius: "12px",
+    marginBottom: "20px",
+    fontSize: "14px",
+    fontWeight: "600"
+  },
+  formCard: {
+    background: "white",
+    borderRadius: "20px",
+    padding: "28px",
+    marginBottom: "24px",
+    boxShadow: "0 4px 20px rgba(15,23,42,0.06)",
+    border: "1px solid #e2e8f0"
+  },
+  formTitle: {
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: "24px"
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px"
+  },
+  formGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px"
+  },
+  label: {
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "#374151"
+  },
+  inputWrapper: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center"
+  },
+  inputIcon: {
+    position: "absolute",
+    left: "14px",
+    color: "#94a3b8",
+    fontSize: "14px"
+  },
+  input: {
+    width: "100%",
+    padding: "11px 14px 11px 40px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontFamily: "'Inter', sans-serif",
+    color: "#0f172a",
+    background: "#f8fafc",
+    outline: "none"
+  },
+  inputPlain: {
+    width: "100%",
+    padding: "11px 14px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontFamily: "'Inter', sans-serif",
+    color: "#0f172a",
+    background: "#f8fafc",
+    outline: "none"
+  },
+  formActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "12px",
+    marginTop: "24px",
+    paddingTop: "20px",
+    borderTop: "1px solid #f1f5f9"
+  },
+  cancelBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#f1f5f9",
+    color: "#475569",
+    border: "1px solid #e2e8f0",
+    padding: "11px 20px",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif"
+  },
+  saveBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "linear-gradient(135deg, #059669, #10b981)",
+    color: "white",
+    border: "none",
+    padding: "11px 24px",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: "0 4px 12px rgba(16,185,129,0.25)"
+  },
+  searchBar: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "20px"
+  },
+  searchIcon: {
+    position: "absolute",
+    left: "16px",
+    color: "#94a3b8",
+    fontSize: "15px"
+  },
+  searchInput: {
+    width: "100%",
+    padding: "13px 44px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "12px",
+    fontSize: "14px",
+    fontFamily: "'Inter', sans-serif",
+    background: "white",
+    outline: "none"
+  },
+  clearSearch: {
+    position: "absolute",
+    right: "16px",
+    color: "#94a3b8",
+    cursor: "pointer"
+  },
+  prescCard: {
+    background: "white",
+    borderRadius: "16px",
+    padding: "20px 24px",
+    boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
+    border: "1px solid #e2e8f0",
+    borderLeft: "5px solid #10b981"
+  },
+  prescTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "16px"
+  },
+  prescLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px"
+  },
+  prescIconWrap: {
+    width: "40px",
+    height: "40px",
+    background: "linear-gradient(135deg, #059669, #10b981)",
+    borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "16px",
+    color: "white",
+    flexShrink: 0
+  },
+  prescMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap"
+  },
+  metaItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px"
+  },
+  metaValue: {
+    fontWeight: "600",
+    color: "#0f172a",
+    fontSize: "14px"
+  },
+  metaDivider: {
+    color: "#e2e8f0",
+    fontWeight: "300"
+  },
+  prescActions: {
+    display: "flex",
+    gap: "8px",
+    flexShrink: 0
+  },
+  printBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    background: "linear-gradient(135deg, #059669, #10b981)",
+    color: "white",
+    border: "none",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif"
+  },
+  deleteBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    background: "linear-gradient(135deg, #b91c1c, #dc2626)",
+    color: "white",
+    border: "none",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif"
+  },
+  prescDetails: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "16px",
+    padding: "16px",
+    background: "#f8fafc",
+    borderRadius: "10px"
+  },
+  detailItem: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px"
+  },
+  detailLabel: {
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#94a3b8",
+    letterSpacing: "0.8px",
+    textTransform: "uppercase"
+  },
+  detailValue: {
+    fontSize: "14px",
+    color: "#374151",
+    fontWeight: "500"
+  },
+  loadingState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "60px",
+    gap: "16px",
+    color: "#64748b"
+  },
+  spinner: {
+    width: "36px",
+    height: "36px",
+    border: "3px solid #e2e8f0",
+    borderTopColor: "#10b981",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite"
+  },
+  emptyState: {
+    background: "white",
+    borderRadius: "20px",
+    textAlign: "center",
+    padding: "60px 24px"
+  },
+  emptyIcon: {
+    width: "72px",
+    height: "72px",
+    background: "linear-gradient(135deg, #d1fae5, #a7f3d0)",
+    borderRadius: "20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "28px",
+    color: "#10b981",
+    margin: "0 auto 20px"
+  }
 };
 
 export default Prescriptions;

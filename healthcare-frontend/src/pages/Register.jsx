@@ -1,5 +1,11 @@
 import { useState } from "react";
 import axios from "axios";
+import {
+  FaHospital, FaUser, FaLock, FaEnvelope, FaPhone,
+  FaBirthdayCake, FaVenusMars, FaTint, FaCheckCircle,
+  FaUserMd, FaCalendarCheck, FaHeartbeat, FaPills,
+  FaBell, FaChartLine, FaShieldAlt, FaArrowLeft
+} from "react-icons/fa";
 import "../Login.css";
 
 export default function Register() {
@@ -9,7 +15,7 @@ export default function Register() {
     gender: "Male", bloodGroup: ""
   });
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState(1); // 1=form, 2=otp
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState({});
@@ -56,21 +62,19 @@ export default function Register() {
     return newErrors;
   };
 
-  // Step 1 — OTP அனுப்பு
   const handleSendOtp = async () => {
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-
     setLoading(true);
     setError("");
     try {
       await axios.post("http://localhost:8080/auth/send-otp", {
         email: formData.email
       });
-      setStep(2); // OTP screen காட்டு
+      setStep(2);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to send OTP");
     } finally {
@@ -78,13 +82,11 @@ export default function Register() {
     }
   };
 
-  // Step 2 — OTP verify பண்ணி register
   const handleVerifyAndRegister = async () => {
     if (!otp || otp.length !== 6) {
       setError("Enter valid 6 digit OTP");
       return;
     }
-
     setLoading(true);
     setError("");
     try {
@@ -102,149 +104,255 @@ export default function Register() {
     }
   };
 
+  const features = [
+    { icon: <FaUserMd />, text: "Patient Records Management" },
+    { icon: <FaCalendarCheck />, text: "Appointment Scheduling" },
+    { icon: <FaHeartbeat />, text: "Vital Signs Monitoring" },
+    { icon: <FaPills />, text: "Prescription Management" },
+    { icon: <FaBell />, text: "Emergency Alert Tracking" },
+    { icon: <FaChartLine />, text: "Health Analytics" },
+  ];
+
   return (
     <div className="login-container">
+
+      {/* LEFT PANEL */}
       <div className="login-left">
-        <div className="login-logo">
-          <span className="logo-icon">🏥</span>
-          <h1>HealthCare</h1>
-          <p>Patient Monitoring System</p>
+        <div className="bg-circle bg-circle-1" />
+        <div className="bg-circle bg-circle-2" />
+        <div className="bg-circle bg-circle-3" />
+
+        <div className="login-brand">
+          <div className="brand-icon">
+            <FaHospital />
+          </div>
+          <h1>HealthCare Pro</h1>
+          <p>Smart Healthcare Monitoring Platform</p>
         </div>
+
         <div className="login-features">
-          <div className="feature-item">✅ Real-time Patient Monitoring</div>
-          <div className="feature-item">✅ Doctor & Appointment Management</div>
-          <div className="feature-item">✅ Emergency Alert System</div>
-          <div className="feature-item">✅ Vital Signs Tracking</div>
+          {features.map((f, i) => (
+            <div className="feature-item" key={i}>
+              <span className="feature-icon">{f.icon}</span>
+              <span>{f.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="login-badge">
+          <FaShieldAlt />
+          <span>HIPAA Compliant & Secure</span>
         </div>
       </div>
 
+      {/* RIGHT PANEL */}
       <div className="login-right">
         <div className="login-card">
+
           <div className="login-header">
+            <div className="header-icon">
+              {step === 1 ? <FaUser /> : <FaEnvelope />}
+            </div>
             <h2>Create Account</h2>
             <p>{step === 1 ? "Register as a Patient" : "Verify your Email"}</p>
           </div>
 
-          {error && <div className="login-error">⚠️ {error}</div>}
+          {error && (
+            <div className="login-error">
+              <FaShieldAlt />
+              <span>{error}</span>
+            </div>
+          )}
 
           {/* Step 1 — Registration Form */}
           {step === 1 && (
             <div className="login-form">
+
               <div className="form-group">
                 <label>Full Name</label>
-                <input type="text" name="fullName"
-                  placeholder="Enter full name"
-                  value={formData.fullName} onChange={handleChange} />
+                <div className="input-wrapper">
+                  <FaUser className="input-icon" />
+                  <input
+                    type="text" name="fullName"
+                    placeholder="Enter full name"
+                    value={formData.fullName} onChange={handleChange}
+                  />
+                </div>
                 {errors.fullName && <span className="field-error">{errors.fullName}</span>}
               </div>
 
               <div className="form-group">
                 <label>Username</label>
-                <input type="text" name="username"
-                  placeholder="Enter username"
-                  value={formData.username} onChange={handleChange} />
+                <div className="input-wrapper">
+                  <FaUser className="input-icon" />
+                  <input
+                    type="text" name="username"
+                    placeholder="Choose a username"
+                    value={formData.username} onChange={handleChange}
+                  />
+                </div>
                 {errors.username && <span className="field-error">{errors.username}</span>}
               </div>
 
               <div className="form-group">
                 <label>Password</label>
-                <input type="password" name="password"
-                  placeholder="Enter password"
-                  value={formData.password} onChange={handleChange} />
+                <div className="input-wrapper">
+                  <FaLock className="input-icon" />
+                  <input
+                    type="password" name="password"
+                    placeholder="Create a password"
+                    value={formData.password} onChange={handleChange}
+                  />
+                </div>
                 {errors.password && <span className="field-error">{errors.password}</span>}
               </div>
 
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" name="email"
-                  placeholder="Enter email"
-                  value={formData.email} onChange={handleChange} />
+                <div className="input-wrapper">
+                  <FaEnvelope className="input-icon" />
+                  <input
+                    type="email" name="email"
+                    placeholder="Enter your email"
+                    value={formData.email} onChange={handleChange}
+                  />
+                </div>
                 {errors.email && <span className="field-error">{errors.email}</span>}
               </div>
 
               <div className="form-group">
-                <label>Phone</label>
-                <input type="text" name="phone"
-                  placeholder="Enter phone number"
-                  value={formData.phone} onChange={handleChange} />
+                <label>Phone Number</label>
+                <div className="input-wrapper">
+                  <FaPhone className="input-icon" />
+                  <input
+                    type="text" name="phone"
+                    placeholder="10 digit phone number"
+                    value={formData.phone} onChange={handleChange}
+                  />
+                </div>
                 {errors.phone && <span className="field-error">{errors.phone}</span>}
               </div>
 
-              <div className="form-group">
-                <label>Age</label>
-                <input type="number" name="age"
-                  placeholder="Enter age"
-                  value={formData.age} onChange={handleChange} />
-                {errors.age && <span className="field-error">{errors.age}</span>}
-              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div className="form-group">
+                  <label>Age</label>
+                  <div className="input-wrapper">
+                    <FaBirthdayCake className="input-icon" />
+                    <input
+                      type="number" name="age"
+                      placeholder="Age"
+                      value={formData.age} onChange={handleChange}
+                    />
+                  </div>
+                  {errors.age && <span className="field-error">{errors.age}</span>}
+                </div>
 
-              <div className="form-group">
-                <label>Gender</label>
-                <select name="gender" value={formData.gender} onChange={handleChange}>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                <div className="form-group">
+                  <label>Gender</label>
+                  <div className="input-wrapper">
+                    <FaVenusMars className="input-icon" />
+                    <select name="gender" value={formData.gender} onChange={handleChange}>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div className="form-group">
                 <label>Blood Group</label>
-                <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange}>
-                  <option value="">Select Blood Group</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                </select>
+                <div className="input-wrapper">
+                  <FaTint className="input-icon" />
+                  <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange}>
+                    <option value="">Select Blood Group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
                 {errors.bloodGroup && <span className="field-error">{errors.bloodGroup}</span>}
               </div>
 
               <button className="login-btn" onClick={handleSendOtp} disabled={loading}>
-                {loading ? "Sending OTP..." : "Send OTP"}
+                {loading ? (
+                  <><span className="spinner" /> Sending OTP...</>
+                ) : (
+                  <><FaShieldAlt /> Send OTP</>
+                )}
               </button>
 
-              <p style={{ textAlign: "center", marginTop: "10px" }}>
-                Already have account?{" "}
-                <a href="/login" style={{ color: "#4f8ef7" }}>Login here</a>
-              </p>
+              <div className="login-footer">
+                <p>
+                  Already have an account?{" "}
+                  <a href="/login">Login here</a>
+                </p>
+              </div>
             </div>
           )}
 
           {/* Step 2 — OTP Screen */}
           {step === 2 && (
             <div className="login-form">
-              <p style={{ textAlign: "center", color: "#555", marginBottom: "20px" }}>
-                OTP sent to <strong>{formData.email}</strong>
-              </p>
+              <div style={{
+                textAlign: "center",
+                color: "#64748b",
+                marginBottom: "10px",
+                fontSize: "14px"
+              }}>
+                <FaCheckCircle style={{ color: "#16a34a", marginRight: "6px" }} />
+                OTP sent to <strong style={{ color: "#0f172a" }}>{formData.email}</strong>
+              </div>
 
               <div className="form-group">
                 <label>Enter 6-digit OTP</label>
-                <input
-                  type="text"
-                  placeholder="Enter OTP"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
+                <div className="input-wrapper">
+                  <FaShieldAlt className="input-icon" />
+                  <input
+                    type="text"
+                    placeholder="000000"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    style={{ letterSpacing: "4px", fontWeight: "700", textAlign: "center" }}
+                  />
+                </div>
               </div>
 
               <button className="login-btn" onClick={handleVerifyAndRegister} disabled={loading}>
-                {loading ? "Verifying..." : "Verify & Register"}
+                {loading ? (
+                  <><span className="spinner" /> Verifying...</>
+                ) : (
+                  <><FaCheckCircle /> Verify & Register</>
+                )}
               </button>
 
               <button
-                style={{
-                  width: "100%", marginTop: "10px", padding: "10px",
-                  background: "none", border: "1px solid #4f8ef7",
-                  borderRadius: "8px", color: "#4f8ef7", cursor: "pointer"
-                }}
                 onClick={() => { setStep(1); setError(""); setOtp(""); }}
+                style={{
+                  width: "100%",
+                  marginTop: "12px",
+                  padding: "12px",
+                  background: "#f1f5f9",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                  color: "#475569",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  fontFamily: "'Inter', sans-serif"
+                }}
               >
-                ← Back to Form
+                <FaArrowLeft /> Back to Form
               </button>
             </div>
           )}

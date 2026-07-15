@@ -18,7 +18,7 @@ import Prescriptions from "./pages/Prescriptions";
 import MyPrescriptions from "./pages/MyPrescriptions";
 import MyVitals from "./pages/MyVitals";
 import PatientReport from "./pages/PatientReport";
-
+import SymptomChecker from "./components/SymptomChecker";
 import "./App.css";
 
 const ProtectedRoute = ({ children }) => {
@@ -205,6 +205,7 @@ function App() {
     </div>
   </ProtectedRoute>
 } />
+<Route path="/symptom-checker" element={<SymptomChecker />} />
 
 
         {/* Invalid Routes */}

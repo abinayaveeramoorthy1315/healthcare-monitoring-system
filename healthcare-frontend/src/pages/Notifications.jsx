@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import { FaBell, FaCheckDouble, FaClock, FaCircle } from "react-icons/fa";
 
 function Notifications() {
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const username = localStorage.getItem("username");
 
-  useEffect(() => {
-    loadNotifications();
-  }, []);
+  useEffect(() => { loadNotifications(); }, []);
 
   const loadNotifications = async () => {
     try {
@@ -15,6 +15,8 @@ function Notifications() {
       setNotifications(res.data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -22,100 +24,257 @@ function Notifications() {
     try {
       await api.put(`/api/notifications/read-all/${username}`);
       loadNotifications();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const markRead = async (id) => {
     try {
       await api.put(`/api/notifications/read/${id}`);
       loadNotifications();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2>🔔 Notifications {unreadCount > 0 && (
-          <span style={{
-            background: "#dc3545",
-            color: "white",
-            borderRadius: "50%",
-            padding: "2px 8px",
-            fontSize: "14px",
-            marginLeft: "8px"
-          }}>
-            {unreadCount}
-          </span>
-        )}</h2>
+    <div style={styles.wrapper}>
+
+      {/* ===== HEADER ===== */}
+      <div style={styles.pageHeader}>
+        <div style={styles.headerLeft}>
+          <div style={styles.headerIcon}>
+            <FaBell />
+            {unreadCount > 0 && (
+              <span style={styles.headerBadge}>{unreadCount}</span>
+            )}
+          </div>
+          <div>
+            <h1 style={styles.pageTitle}>Notifications</h1>
+            <p style={styles.pageSubtitle}>
+              {unreadCount > 0
+                ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
+                : "All caught up!"}
+            </p>
+          </div>
+        </div>
 
         {unreadCount > 0 && (
-          <button
-            onClick={markAllRead}
-            style={{
-              background: "#1a3c5e",
-              color: "white",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: "8px",
-              cursor: "pointer"
-            }}
-          >
-            Mark All Read
+          <button style={styles.markAllBtn} onClick={markAllRead}>
+            <FaCheckDouble /> Mark All Read
           </button>
         )}
       </div>
 
-      <div style={{ marginTop: "20px" }}>
-        {notifications.length === 0 ? (
-          <p style={{ color: "#999", textAlign: "center", padding: "40px" }}>
-            No notifications yet
-          </p>
-        ) : (
-          notifications.map(n => (
+      {/* ===== LIST ===== */}
+      {loading ? (
+        <div style={styles.loadingState}>
+          <div style={styles.spinner} />
+          <p>Loading notifications...</p>
+        </div>
+      ) : notifications.length === 0 ? (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}><FaBell /></div>
+          <h3>No Notifications Yet</h3>
+          <p>You're all caught up! Check back later.</p>
+        </div>
+      ) : (
+        <div style={styles.notifList}>
+          {notifications.map(n => (
             <div
               key={n.notificationId}
               onClick={() => !n.read && markRead(n.notificationId)}
               style={{
-                background: n.read ? "#f8f9fa" : "#e8f4fd",
-                border: n.read ? "1px solid #dee2e6" : "1px solid #bee5eb",
-                borderRadius: "10px",
-                padding: "16px",
-                marginBottom: "12px",
-                cursor: n.read ? "default" : "pointer",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
+                ...styles.notifCard,
+                background: n.read ? "white" : "#eff6ff",
+                borderColor: n.read ? "#e2e8f0" : "#bfdbfe",
+                cursor: n.read ? "default" : "pointer"
               }}
             >
-              <div>
-                <p style={{ margin: 0, fontWeight: n.read ? "normal" : "600" }}>
+              <div style={{
+                ...styles.notifIconWrap,
+                background: n.read ? "#f1f5f9" : "#dbeafe"
+              }}>
+                <FaBell style={{
+                  color: n.read ? "#94a3b8" : "#2563eb",
+                  fontSize: "14px"
+                }} />
+              </div>
+
+              <div style={styles.notifContent}>
+                <p style={{
+                  ...styles.notifMessage,
+                  fontWeight: n.read ? "500" : "700",
+                  color: n.read ? "#64748b" : "#0f172a"
+                }}>
                   {n.message}
                 </p>
-                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#888" }}>
+                <div style={styles.notifTime}>
+                  <FaClock style={{ fontSize: "10px" }} />
                   {new Date(n.createdAt).toLocaleString()}
-                </p>
+                </div>
               </div>
+
               {!n.read && (
-                <span style={{
-                  background: "#0d6efd",
-                  borderRadius: "50%",
-                  width: "10px",
-                  height: "10px",
-                  display: "inline-block"
-                }} />
+                <FaCircle style={styles.unreadDot} />
               )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+const styles = {
+  wrapper: {
+    padding: "28px 32px",
+    minHeight: "100vh",
+    background: "#f1f5f9",
+    fontFamily: "'Inter', sans-serif"
+  },
+  pageHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px"
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px"
+  },
+  headerIcon: {
+    width: "52px",
+    height: "52px",
+    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    borderRadius: "14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "22px",
+    color: "white",
+    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+    position: "relative"
+  },
+  headerBadge: {
+    position: "absolute",
+    top: "-6px",
+    right: "-6px",
+    background: "#dc2626",
+    color: "white",
+    fontSize: "11px",
+    fontWeight: "700",
+    padding: "2px 6px",
+    borderRadius: "10px",
+    minWidth: "20px",
+    textAlign: "center",
+    border: "2px solid #f1f5f9"
+  },
+  pageTitle: {
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0f172a",
+    margin: 0
+  },
+  pageSubtitle: {
+    fontSize: "14px",
+    color: "#64748b",
+    margin: "2px 0 0"
+  },
+  markAllBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    color: "white",
+    border: "none",
+    padding: "12px 22px",
+    borderRadius: "12px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: "0 4px 12px rgba(37,99,235,0.3)"
+  },
+  notifList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px"
+  },
+  notifCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    background: "white",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "14px",
+    padding: "16px 20px",
+    transition: "all 0.2s"
+  },
+  notifIconWrap: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0
+  },
+  notifContent: {
+    flex: 1
+  },
+  notifMessage: {
+    fontSize: "14px",
+    margin: "0 0 4px",
+    lineHeight: 1.4
+  },
+  notifTime: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "12px",
+    color: "#94a3b8"
+  },
+  unreadDot: {
+    fontSize: "8px",
+    color: "#2563eb",
+    flexShrink: 0
+  },
+  loadingState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "60px",
+    gap: "16px",
+    color: "#64748b"
+  },
+  spinner: {
+    width: "36px",
+    height: "36px",
+    border: "3px solid #e2e8f0",
+    borderTopColor: "#2563eb",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite"
+  },
+  emptyState: {
+    background: "white",
+    borderRadius: "20px",
+    textAlign: "center",
+    padding: "60px 24px",
+    border: "1px solid #e2e8f0"
+  },
+  emptyIcon: {
+    width: "72px",
+    height: "72px",
+    background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+    borderRadius: "20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "28px",
+    color: "#2563eb",
+    margin: "0 auto 20px"
+  }
+};
 
 export default Notifications;

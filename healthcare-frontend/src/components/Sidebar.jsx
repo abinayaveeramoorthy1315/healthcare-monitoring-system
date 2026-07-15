@@ -1,33 +1,26 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
-  FaHome,
-  FaUserInjured,
-  FaUserMd,
-  FaCalendarCheck,
-  FaCog,
-  FaHeartbeat,
-  FaBell,
-  FaSignOutAlt,
-  FaClock,
-  FaPills,
-  FaFileMedical
+  FaHome, FaUserInjured, FaUserMd, FaCalendarCheck,
+  FaCog, FaHeartbeat, FaBell, FaSignOutAlt, FaClock,
+  FaPills, FaFileMedical, FaHospital, FaChevronRight
 } from "react-icons/fa";
-
 import api from "../api";
 import "./Sidebar.css";
 
 function Sidebar() {
   const [unreadCount, setUnreadCount] = useState(0);
-
   const role = localStorage.getItem("role");
   const username = localStorage.getItem("username");
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    loadUnreadCount();
-    const interval = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(interval);
+    if (role === "ADMIN" || role === "DOCTOR") {
+      loadUnreadCount();
+      const interval = setInterval(loadUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const loadUnreadCount = async () => {
@@ -40,146 +33,165 @@ function Sidebar() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("username");
-    localStorage.removeItem("patientId");
+    localStorage.clear();
     navigate("/login");
   };
+
+  const isActive = (path) => location.pathname === path;
+
+  const getRoleBadgeColor = () => {
+    if (role === "ADMIN") return "#f59e0b";
+    if (role === "DOCTOR") return "#10b981";
+    return "#3b82f6";
+  };
+
+  const getRoleIcon = () => {
+    if (role === "ADMIN") return "👑";
+    if (role === "DOCTOR") return "👨‍⚕️";
+    return "🏥";
+  };
+
+  const adminDoctorMenus = [
+    { path: "/patients", icon: <FaUserInjured />, label: "Patients" },
+    { path: "/doctors", icon: <FaUserMd />, label: "Doctors" },
+    { path: "/appointments", icon: <FaCalendarCheck />, label: "Appointments" },
+    { path: "/slots", icon: <FaClock />, label: "My Slots" },
+    { path: "/alerts", icon: <FaBell />, label: "Alerts" },
+    { path: "/vitals", icon: <FaHeartbeat />, label: "Vitals" },
+    { path: "/prescriptions", icon: <FaPills />, label: "Prescriptions" },
+  ];
+
+  const patientMenus = [
+    { path: "/book-appointment", icon: <FaCalendarCheck />, label: "Book Appointment" },
+    { path: "/my-vitals", icon: <FaHeartbeat />, label: "My Vitals" },
+    { path: "/my-prescriptions", icon: <FaPills />, label: "My Prescriptions" },
+    { path: "/report", icon: <FaFileMedical />, label: "My Report" },
+  ];
 
   return (
     <div className="sidebar">
 
-      {/* Logo */}
-      <div className="logo-section">
-        <FaHeartbeat className="logo-icon" />
-        <h2>HealthCare</h2>
+      {/* ===== LOGO ===== */}
+      <div className="sidebar-logo">
+        <div className="logo-icon-wrap">
+          <FaHospital />
+        </div>
+        <div className="logo-text">
+          <h2>HealthCare</h2>
+          <span>Pro System</span>
+        </div>
       </div>
 
-      {/* User */}
-      <div className="user-info">
+      {/* ===== USER INFO ===== */}
+      <div className="sidebar-user">
         <div className="user-avatar">
           {username?.charAt(0).toUpperCase()}
         </div>
-        <div>
+        <div className="user-details">
           <p className="user-name">{username}</p>
-          <p className="user-role">{role}</p>
+          <span
+            className="user-role-badge"
+            style={{ background: getRoleBadgeColor() + "22",
+                     color: getRoleBadgeColor(),
+                     border: `1px solid ${getRoleBadgeColor()}44` }}
+          >
+            {getRoleIcon()} {role}
+          </span>
         </div>
       </div>
 
-      {/* Menu */}
-      <ul className="menu">
+      {/* ===== DIVIDER ===== */}
+      <div className="sidebar-divider" />
 
-        <li>
-          <Link to="/dashboard">
-            <FaHome /> Dashboard
-          </Link>
-        </li>
+      {/* ===== MENU ===== */}
+      <nav className="sidebar-nav">
 
-        {/* ✅ ADMIN + DOCTOR */}
+        {/* Dashboard - எல்லாருக்கும் */}
+        <Link
+          to="/dashboard"
+          className={`nav-item ${isActive("/dashboard") ? "active" : ""}`}
+        >
+          <span className="nav-icon"><FaHome /></span>
+          <span className="nav-label">Dashboard</span>
+          {isActive("/dashboard") && (
+            <FaChevronRight className="nav-arrow" />
+          )}
+        </Link>
+
+        {/* ADMIN + DOCTOR */}
         {(role === "ADMIN" || role === "DOCTOR") && (
           <>
-            <li>
-              <Link to="/patients">
-                <FaUserInjured /> Patients
+            <p className="nav-section-title">MANAGEMENT</p>
+            {adminDoctorMenus.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-item ${isActive(item.path) ? "active" : ""}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+                {item.path === "/alerts" && unreadCount > 0 && (
+                  <span className="nav-badge">{unreadCount}</span>
+                )}
+                {isActive(item.path) && (
+                  <FaChevronRight className="nav-arrow" />
+                )}
               </Link>
-            </li>
-            <li>
-              <Link to="/doctors">
-                <FaUserMd /> Doctors
-              </Link>
-            </li>
-            <li>
-              <Link to="/appointments">
-                <FaCalendarCheck /> Appointments
-              </Link>
-            </li>
-            <li>
-              <Link to="/slots">
-                <FaClock /> My Slots
-              </Link>
-            </li>
-            <li>
-              <Link to="/alerts">
-                <FaBell /> Alerts
-              </Link>
-            </li>
-            <li>
-              <Link to="/vitals">
-                <FaHeartbeat /> Vitals
-              </Link>
-            </li>
-            <li>
-              <Link to="/prescriptions">
-                <FaPills /> Prescriptions
-              </Link>
-            </li>
-            {/* ✅ My Vitals - DOCTOR section-ல இல்ல */}
+            ))}
           </>
         )}
 
-        {/* ✅ PATIENT மட்டும் */}
-{role === "PATIENT" && (
-  <>
-    <li>
-      <Link to="/book-appointment">
-        <FaCalendarCheck /> Book Appointment
-      </Link>
-    </li>
-    <li>
-      <Link to="/my-vitals">
-        <FaHeartbeat /> My Vitals
-      </Link>
-    </li>
-    <li>
-      <Link to="/my-prescriptions">
-        <FaPills /> My Prescriptions
-      </Link>
-    </li>
-    {/* ✅ My Report -  */}
-    <li>
-      <Link to="/report">
-        <FaFileMedical /> My Report
-      </Link>
-    </li>
-  </>
-)}
-
-        {/* ✅ Notifications - for all users */}
-        <li>
-          <Link to="/notifications" style={{ position: "relative" }}>
-            <FaBell /> Notifications
-            {unreadCount > 0 && (
-              <span style={{
-                background: "#dc3545",
-                color: "#fff",
-                borderRadius: "50%",
-                padding: "1px 6px",
-                fontSize: "11px",
-                fontWeight: "700",
-                marginLeft: "6px"
-              }}>
-                {unreadCount}
-              </span>
-            )}
-          </Link>
-        </li>
-
-        {/* ✅ ADMIN மட்டும் */}
-        {role === "ADMIN" && (
-          <li>
-            <Link to="/settings">
-              <FaCog /> Settings
-            </Link>
-          </li>
+        {/* PATIENT */}
+        {role === "PATIENT" && (
+          <>
+            <p className="nav-section-title">MY HEALTH</p>
+            {patientMenus.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-item ${isActive(item.path) ? "active" : ""}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+                {isActive(item.path) && (
+                  <FaChevronRight className="nav-arrow" />
+                )}
+              </Link>
+            ))}
+          </>
         )}
 
-      </ul>
+        {/* Notifications */}
+        <p className="nav-section-title">GENERAL</p>
+        <Link
+          to="/notifications"
+          className={`nav-item ${isActive("/notifications") ? "active" : ""}`}
+        >
+          <span className="nav-icon"><FaBell /></span>
+          <span className="nav-label">Notifications</span>
+          {unreadCount > 0 && (
+            <span className="nav-badge">{unreadCount}</span>
+          )}
+        </Link>
 
-      {/* Logout */}
-      <div className="logout-section">
+        {/* ADMIN Settings */}
+        {role === "ADMIN" && (
+          <Link
+            to="/settings"
+            className={`nav-item ${isActive("/settings") ? "active" : ""}`}
+          >
+            <span className="nav-icon"><FaCog /></span>
+            <span className="nav-label">Settings</span>
+          </Link>
+        )}
+
+      </nav>
+
+      {/* ===== LOGOUT ===== */}
+      <div className="sidebar-footer">
         <button className="logout-btn" onClick={handleLogout}>
-          <FaSignOutAlt /> Logout
+          <FaSignOutAlt />
+          <span>Sign Out</span>
         </button>
       </div>
 
