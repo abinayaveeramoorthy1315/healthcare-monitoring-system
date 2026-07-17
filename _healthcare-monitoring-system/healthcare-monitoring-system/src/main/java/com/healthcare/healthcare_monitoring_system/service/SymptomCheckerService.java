@@ -3,6 +3,11 @@ package com.healthcare.healthcare_monitoring_system.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthcare.healthcare_monitoring_system.dto.SymptomResponseDTO;
+import com.healthcare.healthcare_monitoring_system.entity.Doctor;
+import com.healthcare.healthcare_monitoring_system.entity.Patient;
+import com.healthcare.healthcare_monitoring_system.repository.DoctorRepository;
+import com.healthcare.healthcare_monitoring_system.repository.PatientRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -21,11 +26,24 @@ public class SymptomCheckerService {
 
     private final WebClient webClient;
 
+    @Autowired
+    private EmailTemplateService emailTemplateService;
+
+    @Autowired
+    private PatientRepository patientRepository;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
+
     public SymptomCheckerService() {
         this.webClient = WebClient.builder().build();
     }
 
     public SymptomResponseDTO analyzeSymptoms(String symptoms) {
+        return analyzeSymptoms(symptoms, null);
+    }
+
+    public SymptomResponseDTO analyzeSymptoms(String symptoms, String patientIdStr) {
 
         String prompt = "You are a non-diagnostic AI health assistant. "
             + "A patient reports these symptoms: \"" + symptoms + "\". "
@@ -55,7 +73,32 @@ public class SymptomCheckerService {
                 .bodyToMono(String.class)
                 .block();
 
-            return parseResponse(response);
+            SymptomResponseDTO dto = parseResponse(response);
+            try {
+                if (patientIdStr != null && !patientIdStr.trim().isEmpty()) {
+                    Long pid = Long.valueOf(patientIdStr);
+                    Patient pat = patientRepository.findById(pid).orElse(null);
+                    if (pat != null && pat.getEmail() != null && !pat.getEmail().trim().isEmpty()) {
+                        String spec = dto.getSuggestedSpecialization() != null ? dto.getSuggestedSpecialization() : "General Physician";
+                        Doctor bestDoc = doctorRepository.findAll().stream()
+                            .filter(d -> d.getSpecialization() != null && d.getSpecialization().equalsIgnoreCase(spec))
+                            .findFirst().orElse(null);
+                        String docName = bestDoc != null ? bestDoc.getDoctorName() : "On-Duty Specialist";
+                        emailTemplateService.sendAiRecommendationMail(
+                            pat.getEmail(),
+                            pat.getName(),
+                            symptoms,
+                            docName,
+                            spec,
+                            4.9,
+                            bestDoc != null && bestDoc.getAvailability() != null ? bestDoc.getAvailability() : "12+ Years"
+                        );
+                    }
+                }
+            } catch (Exception ex) {
+                System.err.println("Notice: AI recommendation mail note: " + ex.getMessage());
+            }
+            return dto;
 
         } catch (Exception e) {
             e.printStackTrace();

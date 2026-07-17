@@ -19,10 +19,10 @@ public class EmergencyController {
     @PostMapping
     public EmergencyRequest raiseEmergency(
             @RequestParam Long patientId,
-            @RequestParam Long doctorId,
-            @RequestParam String message,
-            @RequestParam Double latitude,
-            @RequestParam Double longitude) {
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false, defaultValue = "Emergency SOS Triggered") String message,
+            @RequestParam(required = false, defaultValue = "18.5204") Double latitude,
+            @RequestParam(required = false, defaultValue = "73.8567") Double longitude) {
 
         return emergencyService.raiseEmergency(
                 patientId,
@@ -49,10 +49,45 @@ public class EmergencyController {
         return emergencyService.getPatientRequests(patientName);
     }
 
+    @GetMapping("/assigned/{username}")
+    public List<EmergencyRequest> getAssignedDoctorRequests(@PathVariable String username) {
+        return emergencyService.getAssignedRequestsForDoctorUsername(username);
+    }
+
+    @PostMapping("/{id}/accept")
+    public EmergencyRequest acceptEmergency(@PathVariable Long id, @RequestParam(required = false) String username) {
+        return emergencyService.acceptEmergency(id, username);
+    }
+
+    @PostMapping("/{id}/reject")
+    public EmergencyRequest rejectEmergency(@PathVariable Long id, @RequestParam(required = false) String username) {
+        return emergencyService.rejectEmergency(id, username);
+    }
+
+    @PostMapping("/{id}/arrived")
+    public EmergencyRequest markArrived(@PathVariable Long id) {
+        return emergencyService.markArrived(id);
+    }
+
     @PutMapping("/{id}")
     public EmergencyRequest update(@PathVariable Long id,
                                    @RequestParam String status) {
 
         return emergencyService.updateStatus(id, status);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteRequest(@PathVariable Long id) {
+        emergencyService.deleteRequest(id);
+    }
+
+    @DeleteMapping("/doctor/{doctorName}/clear")
+    public void clearDoctorRequests(@PathVariable String doctorName) {
+        emergencyService.clearDoctorRequests(doctorName);
+    }
+
+    @DeleteMapping("/clear-all")
+    public void clearAllRequests() {
+        emergencyService.clearAllRequests();
     }
 }

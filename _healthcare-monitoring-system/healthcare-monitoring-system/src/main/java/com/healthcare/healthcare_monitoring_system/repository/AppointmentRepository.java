@@ -8,5 +8,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByDoctor_DoctorId(Long doctorId);
     List<Appointment> findByPatient_PatientId(Long patientId);
     Optional<Appointment> findTopByPatient_PatientIdOrderByAppointmentDateDesc(Long patientId);
- 
+    Optional<Appointment> findTopByPatient_PatientIdAndStatusNotOrderByAppointmentDateDesc(Long patientId, String status);
+    long countByDoctor_DoctorIdAndStatus(Long doctorId, String status);
 }

@@ -18,6 +18,6 @@ public class SymptomCheckerController {
 
     @PostMapping("/analyze")
     public SymptomResponseDTO analyze(@RequestBody SymptomRequestDTO request) {
-        return symptomCheckerService.analyzeSymptoms(request.getSymptoms());
+        return symptomCheckerService.analyzeSymptoms(request.getSymptoms(), request.getPatientId());
     }
 }

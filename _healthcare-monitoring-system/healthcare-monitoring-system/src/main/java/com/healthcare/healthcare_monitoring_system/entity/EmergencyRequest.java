@@ -28,9 +28,48 @@ public class EmergencyRequest {
 
     private String locationLink;
 
+    @Column(name = "patient_id")
+    private Long patientId;
+
+    @Column(name = "assigned_doctor_id")
+    private Long assignedDoctorId;
+
+    @Column(name = "emergency_status")
+    private String emergencyStatus;
+
+    @Column(name = "emergency_severity")
+    private String emergencySeverity;
+
+    @Column(name = "acknowledged_at")
+    private LocalDateTime acknowledgedAt;
+
+    @Column(name = "accepted_at")
+    private LocalDateTime acceptedAt;
+
+    @Column(name = "ambulance_status")
+    private String ambulanceStatus;
+
+    @Column(name = "ambulance_driver")
+    private String ambulanceDriver;
+
+    private String eta;
+
+    @Column(name = "live_latitude")
+    private Double liveLatitude;
+
+    @Column(name = "live_longitude")
+    private Double liveLongitude;
+
+    @Column(name = "notifications_sent")
+    private Boolean notificationsSent = false;
+
     public EmergencyRequest() {
         this.createdAt = LocalDateTime.now();
         this.status = "PENDING";
+        this.emergencyStatus = "PENDING";
+        this.emergencySeverity = "HIGH";
+        this.ambulanceStatus = "DISPATCHED";
+        this.notificationsSent = false;
     }
 
     public Long getId() {
@@ -71,6 +110,9 @@ public class EmergencyRequest {
 
     public void setStatus(String status) {
         this.status=status;
+        if (status != null) {
+            this.emergencyStatus = status;
+        }
     }
 
     public LocalDateTime getCreatedAt() {
@@ -86,6 +128,7 @@ public class EmergencyRequest {
 
     public void setLatitude(Double latitude) {
         this.latitude = latitude;
+        this.liveLatitude = latitude;
     }
 
     public Double getLongitude() {
@@ -94,6 +137,7 @@ public class EmergencyRequest {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+        this.liveLongitude = longitude;
     }
 
     public String getLocationLink() {
@@ -102,5 +146,106 @@ public class EmergencyRequest {
 
     public void setLocationLink(String locationLink) {
         this.locationLink = locationLink;
+    }
+
+    public Long getPatientId() {
+        return patientId;
+    }
+
+    public void setPatientId(Long patientId) {
+        this.patientId = patientId;
+    }
+
+    public Long getAssignedDoctorId() {
+        return assignedDoctorId;
+    }
+
+    public void setAssignedDoctorId(Long assignedDoctorId) {
+        this.assignedDoctorId = assignedDoctorId;
+    }
+
+    public String getEmergencyStatus() {
+        return emergencyStatus != null ? emergencyStatus : status;
+    }
+
+    public void setEmergencyStatus(String emergencyStatus) {
+        this.emergencyStatus = emergencyStatus;
+        if (emergencyStatus != null) {
+            this.status = emergencyStatus;
+        }
+    }
+
+    public String getEmergencySeverity() {
+        return emergencySeverity;
+    }
+
+    public void setEmergencySeverity(String emergencySeverity) {
+        this.emergencySeverity = emergencySeverity;
+    }
+
+    public LocalDateTime getAcknowledgedAt() {
+        return acknowledgedAt;
+    }
+
+    public void setAcknowledgedAt(LocalDateTime acknowledgedAt) {
+        this.acknowledgedAt = acknowledgedAt;
+    }
+
+    public LocalDateTime getAcceptedAt() {
+        return acceptedAt;
+    }
+
+    public void setAcceptedAt(LocalDateTime acceptedAt) {
+        this.acceptedAt = acceptedAt;
+    }
+
+    public String getAmbulanceStatus() {
+        return ambulanceStatus;
+    }
+
+    public void setAmbulanceStatus(String ambulanceStatus) {
+        this.ambulanceStatus = ambulanceStatus;
+    }
+
+    public String getAmbulanceDriver() {
+        return ambulanceDriver;
+    }
+
+    public void setAmbulanceDriver(String ambulanceDriver) {
+        this.ambulanceDriver = ambulanceDriver;
+    }
+
+    public String getEta() {
+        return eta;
+    }
+
+    public void setEta(String eta) {
+        this.eta = eta;
+    }
+
+    public Double getLiveLatitude() {
+        return liveLatitude != null ? liveLatitude : latitude;
+    }
+
+    public void setLiveLatitude(Double liveLatitude) {
+        this.liveLatitude = liveLatitude;
+        this.latitude = liveLatitude;
+    }
+
+    public Double getLiveLongitude() {
+        return liveLongitude != null ? liveLongitude : longitude;
+    }
+
+    public void setLiveLongitude(Double liveLongitude) {
+        this.liveLongitude = liveLongitude;
+        this.longitude = liveLongitude;
+    }
+
+    public Boolean getNotificationsSent() {
+        return notificationsSent != null ? notificationsSent : false;
+    }
+
+    public void setNotificationsSent(Boolean notificationsSent) {
+        this.notificationsSent = notificationsSent;
     }
 }

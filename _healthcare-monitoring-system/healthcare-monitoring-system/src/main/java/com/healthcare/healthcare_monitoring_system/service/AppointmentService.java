@@ -13,6 +13,9 @@ import com.healthcare.healthcare_monitoring_system.repository.AppointmentReposit
 import com.healthcare.healthcare_monitoring_system.repository.DoctorRepository;
 import com.healthcare.healthcare_monitoring_system.repository.PatientRepository;
 import com.healthcare.healthcare_monitoring_system.repository.UserRepository;
+import com.healthcare.healthcare_monitoring_system.repository.DoctorSlotRepository;
+import com.healthcare.healthcare_monitoring_system.entity.DoctorSlot;
+import java.time.LocalDate;
 import com.healthcare.healthcare_monitoring_system.service.MailService;
 
 @Service
@@ -36,90 +39,95 @@ public class AppointmentService {
     @Autowired
     private MailService mailService;
 
+    @Autowired
+    private EmailTemplateService emailTemplateService;
+
+    @Autowired
+    private DoctorSlotRepository doctorSlotRepository;
+
     // Save Appointment
     public Appointment saveAppointment(Appointment appointment) {
+
+        // 1. Resolve Doctor from doctorId if doctor object is null
+        if (appointment.getDoctor() == null && appointment.getDoctorId() != null) {
+            doctorRepository.findById(appointment.getDoctorId()).ifPresent(appointment::setDoctor);
+        }
+
+        // 2. Resolve Patient from patientId or username if patient object is null
+        if (appointment.getPatient() == null) {
+            if (appointment.getPatientId() != null) {
+                patientRepository.findById(appointment.getPatientId()).ifPresent(appointment::setPatient);
+            } else if (appointment.getUsername() != null && !appointment.getUsername().trim().isEmpty()) {
+                String unameClean = appointment.getUsername().trim().toLowerCase().replace(" ", "");
+                patientRepository.findAll().stream()
+                        .filter(p -> p.getName() != null && p.getName().trim().toLowerCase().replace(" ", "").equals(unameClean))
+                        .findFirst()
+                        .ifPresent(appointment::setPatient);
+            }
+        }
+
+        // 3. Resolve Date and Time from slotId if present
+        if (appointment.getSlotId() != null) {
+            doctorSlotRepository.findById(appointment.getSlotId()).ifPresent(slot -> {
+                if (appointment.getAppointmentDate() == null || appointment.getAppointmentDate().isEmpty()) {
+                    appointment.setAppointmentDate(slot.getSlotDate().toString());
+                }
+                if (appointment.getAppointmentTime() == null || appointment.getAppointmentTime().isEmpty()) {
+                    appointment.setAppointmentTime(slot.getStartTime() + " - " + slot.getEndTime());
+                }
+                slot.setBooked(true);
+                doctorSlotRepository.save(slot);
+            });
+        }
+
+        if (appointment.getStatus() == null || appointment.getStatus().trim().isEmpty() || !"PENDING".equalsIgnoreCase(appointment.getStatus())) {
+            appointment.setStatus("PENDING");
+        }
 
         Appointment saved = appointmentRepository.save(appointment);
 
         // ==========================
-        // Doctor Notification
+        // Doctor Notification & Email (When appointment is booked/requested by patient)
         // ==========================
-
         try {
+            Doctor doctor = saved.getDoctor();
+            Patient patient = saved.getPatient();
+            if (doctor != null) {
+                String patientName = patient != null ? patient.getName() : "Patient";
+                String patientPhone = patient != null ? patient.getPhone() : "N/A";
+                String patientEmail = patient != null ? patient.getEmail() : "N/A";
+                String doctorEmail = doctor.getEmail();
 
-            Doctor doctor = doctorRepository
-                    .findById(saved.getDoctor().getDoctorId())
-                    .orElse(null);
-
-            if (doctor != null && doctor.getUserId() != null) {
-
-                userRepository.findById(doctor.getUserId()).ifPresent(user -> {
-
-                    notificationService.createNotification(
-                            user.getUsername(),
-                            "📅 New appointment booked on "
-                                    + saved.getAppointmentDate()
-                    );
-
-                });
-
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // ==========================
-        // Send Email
-        // ==========================
-
-        try {
-
-            Patient patient = patientRepository
-                    .findById(saved.getPatient().getPatientId())
-                    .orElse(null);
-
-            Doctor doctor = doctorRepository
-                    .findById(saved.getDoctor().getDoctorId())
-                    .orElse(null);
-
-            if (patient != null && doctor != null) {
-
-                System.out.println("Patient Name : " + patient.getName());
-                System.out.println("Patient Email : " + patient.getEmail());
-                System.out.println("===== MAIL DEBUG =====");
-
-                if(saved.getPatient() == null){
-                    System.out.println("Patient is NULL");
-                }else{
-                    System.out.println("Patient ID : " + saved.getPatient().getPatientId());
-                    System.out.println("Patient Name : " + saved.getPatient().getName());
-                    System.out.println("Patient Email : " + saved.getPatient().getEmail());
+                if (doctor.getUserId() != null) {
+                    userRepository.findById(doctor.getUserId()).ifPresent(user -> {
+                        notificationService.createNotification(
+                                user.getUsername(),
+                                "📅 New appointment request from " + patientName + " on " + saved.getAppointmentDate() + " (" + saved.getAppointmentTime() + ")"
+                        );
+                    });
                 }
-
-                mailService.sendAppointmentMail(
-                        patient.getEmail(),
-                        patient.getName(),
-                        doctor.getDoctorName(),
-                        saved.getAppointmentDate(),
-                        saved.getAppointmentTime()
-                );
-
-                System.out.println("Mail Sent Successfully");
-
-            } else {
-
-                System.out.println("Patient or Doctor not found");
-
+                
+                System.out.println("\n--- [Appointment Workflow: Patient Booking] ---");
+                if (doctorEmail != null && !doctorEmail.trim().isEmpty()) {
+                    mailService.sendAppointmentRequestToDoctor(
+                            doctorEmail,
+                            doctor.getDoctorName(),
+                            patientName,
+                            saved.getAppointmentDate(),
+                            saved.getAppointmentTime(),
+                            patientPhone,
+                            patientEmail,
+                            saved.getReason()
+                    );
+                } else {
+                    System.err.println("Debug Log - Mail failure reason: Doctor email address is missing");
+                }
             }
-
         } catch (Exception e) {
-
-            System.out.println("Mail Error");
-            e.printStackTrace();
-
+            System.err.println("Notice: Doctor notification/email error during booking: " + e.getMessage());
         }
 
+        // Note: As per workflow requirements, patient notification and confirmation mail are sent once doctor confirms via updateStatus.
         return saved;
     }
 
@@ -150,70 +158,94 @@ public class AppointmentService {
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
         appointment.setStatus(status);
-
         appointmentRepository.save(appointment);
 
-        // Notification
-        try {
+        boolean isConfirmed = "BOOKED".equalsIgnoreCase(status) || "ACCEPTED".equalsIgnoreCase(status) || "CONFIRMED".equalsIgnoreCase(status);
 
-            if (appointment.getPatient() != null) {
+        if (!isConfirmed && ("CANCELLED".equalsIgnoreCase(status) || "REJECTED".equalsIgnoreCase(status))) {
+            try {
+                if (appointment.getDoctor() != null && appointment.getAppointmentDate() != null && appointment.getAppointmentTime() != null) {
+                    Long doctorId = appointment.getDoctor().getDoctorId();
+                    LocalDate slotDate = LocalDate.parse(appointment.getAppointmentDate());
+                    String startTime = appointment.getAppointmentTime().split(" - ")[0].trim();
 
-                String patientName = appointment.getPatient().getName();
-
-                if (patientName != null) {
-
-                    String username = patientName
-                            .toLowerCase()
-                            .replace(" ", "");
-
-                    String msg = status.equalsIgnoreCase("BOOKED")
-                            ? "✅ Your appointment has been accepted!"
-                            : "❌ Your appointment has been cancelled.";
-
-                    notificationService.createNotification(username, msg);
-
+                    doctorSlotRepository.findByDoctor_DoctorIdAndSlotDateAndStartTime(doctorId, slotDate, startTime)
+                            .ifPresent(slot -> {
+                                slot.setBooked(false);
+                                doctorSlotRepository.save(slot);
+                            });
                 }
-
+            } catch (Exception e) {
+                System.err.println("Failed to restore slot availability on cancellation: " + e.getMessage());
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
 
         // ===========================
-        // SEND STATUS EMAIL
+        // Patient In-App & Email Notification on Doctor Confirmation/Rejection
         // ===========================
-
         try {
+            Patient patient = appointment.getPatient();
+            Doctor doctor = appointment.getDoctor();
 
-            Patient patient = patientRepository
-                    .findById(appointment.getPatient().getPatientId())
-                    .orElse(null);
+            if (patient != null) {
+                String targetUsername = "";
+                if (patient.getUserId() != null) {
+                    targetUsername = userRepository.findById(patient.getUserId())
+                            .map(u -> u.getUsername())
+                            .orElse("");
+                }
+                if (targetUsername.isEmpty() && patient.getName() != null) {
+                    targetUsername = patient.getName().toLowerCase().replace(" ", "");
+                }
 
-            Doctor doctor = doctorRepository
-                    .findById(appointment.getDoctor().getDoctorId())
-                    .orElse(null);
+                String docName = doctor != null ? doctor.getDoctorName() : "Doctor";
+                String docEmail = doctor != null ? doctor.getEmail() : "N/A";
+                String spec = doctor != null ? doctor.getSpecialization() : "General Medicine";
+                String patientEmail = patient.getEmail();
 
-            if (patient != null && doctor != null) {
+                String msg = isConfirmed
+                        ? "✅ Your appointment with Dr. " + docName + " on " + appointment.getAppointmentDate() + " (" + appointment.getAppointmentTime() + ") has been confirmed!"
+                        : "❌ Your appointment with Dr. " + docName + " on " + appointment.getAppointmentDate() + " has been cancelled/rejected.";
 
-                mailService.sendStatusMail(
-                        patient.getEmail(),
-                        patient.getName(),
-                        doctor.getDoctorName(),
-                        appointment.getAppointmentDate(),
-                        appointment.getAppointmentTime(),
-                        status
-                );
+                if (!targetUsername.isEmpty()) {
+                    notificationService.createNotification(targetUsername, msg);
+                }
 
-                System.out.println("Status Mail Sent Successfully");
-
+                if (isConfirmed) {
+                    System.out.println("\n--- [Appointment Workflow: Doctor Acceptance] ---");
+                    if (patientEmail != null && !patientEmail.trim().isEmpty()) {
+                        mailService.sendAppointmentConfirmedToPatient(
+                                patientEmail,
+                                patient.getName(),
+                                docName,
+                                spec,
+                                appointment.getAppointmentDate(),
+                                appointment.getAppointmentTime(),
+                                "Smart Healthcare City Center",
+                                docEmail
+                        );
+                    } else {
+                        System.err.println("Debug Log - Mail failure reason: Patient email address is missing");
+                    }
+                } else {
+                    System.out.println("\n--- [Appointment Workflow: Doctor Rejection] ---");
+                    if (patientEmail != null && !patientEmail.trim().isEmpty()) {
+                        mailService.sendAppointmentRejectedToPatient(
+                                patientEmail,
+                                patient.getName(),
+                                docName,
+                                appointment.getAppointmentDate(),
+                                appointment.getAppointmentTime(),
+                                "Schedule conflict / Cancelled by doctor",
+                                docEmail
+                        );
+                    } else {
+                        System.err.println("Debug Log - Mail failure reason: Patient email address is missing");
+                    }
+                }
             }
-
         } catch (Exception e) {
-
-            System.out.println("Status Mail Error");
-            e.printStackTrace();
-
+            System.err.println("Error sending status update notification/mail to patient: " + e.getMessage());
         }
 
         return ResponseEntity.ok(appointment);

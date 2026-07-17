@@ -31,4 +31,14 @@ public class EmergencyAlertController {
     public List<EmergencyAlert> getLatestAlerts() {
         return emergencyAlertService.getLatestAlerts();
     }
+
+    @DeleteMapping("/{id}")
+    public void deleteAlert(@PathVariable Long id) {
+        emergencyAlertService.deleteAlert(id);
+    }
+
+    @DeleteMapping("/clear-all")
+    public void clearAllAlerts() {
+        emergencyAlertService.clearAllAlerts();
+    }
 }

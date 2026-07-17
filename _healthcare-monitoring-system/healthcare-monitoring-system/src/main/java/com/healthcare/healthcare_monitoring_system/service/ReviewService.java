@@ -14,15 +14,18 @@ public class ReviewService {
     private final AppointmentRepository appointmentRepository;
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
+    private final EmailTemplateService emailTemplateService;
 
     public ReviewService(ReviewRepository reviewRepository,
                           AppointmentRepository appointmentRepository,
                           PatientRepository patientRepository,
-                          DoctorRepository doctorRepository) {
+                          DoctorRepository doctorRepository,
+                          EmailTemplateService emailTemplateService) {
         this.reviewRepository = reviewRepository;
         this.appointmentRepository = appointmentRepository;
         this.patientRepository = patientRepository;
         this.doctorRepository = doctorRepository;
+        this.emailTemplateService = emailTemplateService;
     }
 
     public Review submitReview(Long appointmentId, Long patientId, Long doctorId, Integer rating, String comment) {
@@ -45,7 +48,21 @@ public class ReviewService {
         review.setRating(rating);
         review.setComment(comment);
 
-        return reviewRepository.save(review);
+        Review saved = reviewRepository.save(review);
+        try {
+            if (doctor.getEmail() != null && !doctor.getEmail().trim().isEmpty()) {
+                emailTemplateService.sendReviewSubmittedMail(
+                    doctor.getEmail(),
+                    doctor.getDoctorName(),
+                    patient.getName(),
+                    rating,
+                    comment
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Notice: Failed to send review email: " + e.getMessage());
+        }
+        return saved;
     }
 
     public List<Review> getReviewsByDoctor(Long doctorId) {

@@ -1,18 +1,16 @@
 package com.healthcare.healthcare_monitoring_system.service;
 
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import java.util.Random;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final EmailTemplateService emailTemplateService;
     private final OtpStore otpStore;
 
-    public EmailService(JavaMailSender mailSender, OtpStore otpStore) {
-        this.mailSender = mailSender;
+    public EmailService(EmailTemplateService emailTemplateService, OtpStore otpStore) {
+        this.emailTemplateService = emailTemplateService;
         this.otpStore = otpStore;
     }
 
@@ -21,15 +19,10 @@ public class EmailService {
     }
 
     public void sendOtp(String email, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("HealthCare - Email Verification OTP");
-        message.setText(
-            "Dear User,\n\n" +
-            "Your OTP for email verification is: " + otp + "\n\n" +
-            "This OTP is valid for 10 minutes.\n\n" +
-            "HealthCare Team"
-        );
-        mailSender.send(message);
+        emailTemplateService.sendEmailOtpMail(email, otp);
+    }
+
+    public void sendPasswordResetOtp(String email, String otp) {
+        emailTemplateService.sendPasswordResetOtpMail(email, otp);
     }
 }

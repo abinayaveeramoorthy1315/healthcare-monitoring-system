@@ -27,19 +27,22 @@ public class VitalsRiskAnalysisService {
     private final WebClient webClient;
     private final NotificationRepository notificationRepository;
     private final PatientRepository patientRepository;
+    private final EmergencyService emergencyService;
 
     public VitalsRiskAnalysisService(NotificationRepository notificationRepository,
-                                      PatientRepository patientRepository) {
+                                      PatientRepository patientRepository,
+                                      EmergencyService emergencyService) {
         this.webClient = WebClient.builder().build();
         this.notificationRepository = notificationRepository;
         this.patientRepository = patientRepository;
+        this.emergencyService = emergencyService;
     }
 
     /**
      * Uses the riskLevel ALREADY calculated by VitalSignsService.
      * Only generates an AI explanation + doctor notification for HIGH/CRITICAL.
      */
-    public void notifyDoctorIfNeeded(VitalSigns vitals, String doctorUsername) {
+    public void notifyDoctorIfNeeded(VitalSigns vitals, String loggedInUsername) {
         String riskLevel = vitals.getRiskLevel();
 
         if (riskLevel == null || riskLevel.equalsIgnoreCase("LOW")) {
@@ -52,10 +55,25 @@ public class VitalsRiskAnalysisService {
             patient = patientRepository.findById(vitals.getPatient().getPatientId()).orElse(null);
         }
 
-        String patientName = (patient != null && patient.getName() != null) ? patient.getName() : "Unknown Patient";
+        if (patient == null) {
+            return;
+        }
 
         String reason = getAIExplanation(vitals, riskLevel);
-        createNotification(patientName, riskLevel, reason, doctorUsername);
+
+        // Smart Hospital Routing: Trigger targeted emergency SOS instead of notifying the logged-in user!
+        try {
+            emergencyService.raiseEmergency(
+                    patient.getPatientId(),
+                    null,
+                    "AI Vitals Alert (" + riskLevel + "): " + reason,
+                    13.0827,
+                    80.2707
+            );
+            System.out.println("✅ VitalsRiskAnalysisService: Smart emergency routed for " + patient.getName() + " (" + riskLevel + ")");
+        } catch (Exception e) {
+            System.err.println("❌ Failed to route vitals emergency: " + e.getMessage());
+        }
     }
 
     private String getAIExplanation(VitalSigns v, String riskLevel) {
