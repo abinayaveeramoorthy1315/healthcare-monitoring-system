@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import {
   FaHome, FaUserInjured, FaUserMd, FaCalendarCheck,
   FaCog, FaHeartbeat, FaBell, FaSignOutAlt, FaClock,
-  FaPills, FaFileMedical, FaHospital, FaChevronRight
+  FaPills, FaFileMedical, FaHospital, FaChevronRight,
+  FaUser, FaIdCard
 } from "react-icons/fa";
 import api from "../api";
 import "./Sidebar.css";
@@ -40,9 +41,9 @@ function Sidebar() {
   const isActive = (path) => location.pathname === path;
 
   const getRoleBadgeColor = () => {
-    if (role === "ADMIN") return "#f59e0b";
-    if (role === "DOCTOR") return "#10b981";
-    return "#3b82f6";
+    if (role === "ADMIN") return "#d97706";
+    if (role === "DOCTOR") return "#35663f";
+    return "#528b5e";
   };
 
   const getRoleIcon = () => {
@@ -83,7 +84,7 @@ function Sidebar() {
       </div>
 
       {/* ===== USER INFO ===== */}
-      <div className="sidebar-user">
+      <Link to="/profile" className="sidebar-user" style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}>
         <div className="user-avatar">
           {username?.charAt(0).toUpperCase()}
         </div>
@@ -98,7 +99,7 @@ function Sidebar() {
             {getRoleIcon()} {role}
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* ===== DIVIDER ===== */}
       <div className="sidebar-divider" />
@@ -161,8 +162,18 @@ function Sidebar() {
           </>
         )}
 
-        {/* Notifications */}
+        {/* Notifications & Profile */}
         <p className="nav-section-title">GENERAL</p>
+        <Link
+          to="/profile"
+          className={`nav-item ${isActive("/profile") ? "active" : ""}`}
+        >
+          <span className="nav-icon">{role === "PATIENT" ? <FaIdCard /> : <FaUser />}</span>
+          <span className="nav-label">{role === "PATIENT" ? "Health Passport" : "My Profile"}</span>
+          {isActive("/profile") && (
+            <FaChevronRight className="nav-arrow" />
+          )}
+        </Link>
         <Link
           to="/notifications"
           className={`nav-item ${isActive("/notifications") ? "active" : ""}`}

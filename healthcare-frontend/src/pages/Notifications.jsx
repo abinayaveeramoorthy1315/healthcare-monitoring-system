@@ -85,17 +85,17 @@ function Notifications() {
               onClick={() => !n.read && markRead(n.notificationId)}
               style={{
                 ...styles.notifCard,
-                background: n.read ? "white" : "#eff6ff",
-                borderColor: n.read ? "#e2e8f0" : "#bfdbfe",
+                background: n.read ? "white" : "#edf7ed",
+                borderColor: n.read ? "rgba(82,139,94,0.2)" : "#82c08e",
                 cursor: n.read ? "default" : "pointer"
               }}
             >
               <div style={{
                 ...styles.notifIconWrap,
-                background: n.read ? "#f1f5f9" : "#dbeafe"
+                background: n.read ? "#f8fafc" : "#dcfce7"
               }}>
                 <FaBell style={{
-                  color: n.read ? "#94a3b8" : "#2563eb",
+                  color: n.read ? "#82c08e" : "#35663f",
                   fontSize: "14px"
                 }} />
               </div>
@@ -104,7 +104,7 @@ function Notifications() {
                 <p style={{
                   ...styles.notifMessage,
                   fontWeight: n.read ? "500" : "700",
-                  color: n.read ? "#64748b" : "#0f172a"
+                  color: n.read ? "#5c7564" : "#1a3323"
                 }}>
                   {n.message}
                 </p>
@@ -129,8 +129,8 @@ const styles = {
   wrapper: {
     padding: "28px 32px",
     minHeight: "100vh",
-    background: "#f1f5f9",
-    fontFamily: "'Inter', sans-serif"
+    background: "#edf7ed",
+    fontFamily: "'Outfit', sans-serif"
   },
   pageHeader: {
     display: "flex",
@@ -146,14 +146,14 @@ const styles = {
   headerIcon: {
     width: "52px",
     height: "52px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "22px",
     color: "white",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)",
     position: "relative"
   },
   headerBadge: {
@@ -168,24 +168,24 @@ const styles = {
     borderRadius: "10px",
     minWidth: "20px",
     textAlign: "center",
-    border: "2px solid #f1f5f9"
+    border: "2px solid #edf7ed"
   },
   pageTitle: {
     fontSize: "24px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: "#1a3323",
     margin: 0
   },
   pageSubtitle: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "#5c7564",
     margin: "2px 0 0"
   },
   markAllBtn: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     padding: "12px 22px",
@@ -193,8 +193,8 @@ const styles = {
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    fontFamily: "'Inter', sans-serif",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)"
+    fontFamily: "'Outfit', sans-serif",
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)"
   },
   notifList: {
     display: "flex",
@@ -206,7 +206,7 @@ const styles = {
     alignItems: "center",
     gap: "14px",
     background: "white",
-    border: "1.5px solid #e2e8f0",
+    border: "1.5px solid rgba(82,139,94,0.2)",
     borderRadius: "14px",
     padding: "16px 20px",
     transition: "all 0.2s"
@@ -233,11 +233,11 @@ const styles = {
     alignItems: "center",
     gap: "6px",
     fontSize: "12px",
-    color: "#94a3b8"
+    color: "#82c08e"
   },
   unreadDot: {
     fontSize: "8px",
-    color: "#2563eb",
+    color: "#35663f",
     flexShrink: 0
   },
   loadingState: {
@@ -246,13 +246,13 @@ const styles = {
     alignItems: "center",
     padding: "60px",
     gap: "16px",
-    color: "#64748b"
+    color: "#5c7564"
   },
   spinner: {
     width: "36px",
     height: "36px",
-    border: "3px solid #e2e8f0",
-    borderTopColor: "#2563eb",
+    border: "3px solid rgba(82,139,94,0.2)",
+    borderTopColor: "#528b5e",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite"
   },
@@ -261,18 +261,18 @@ const styles = {
     borderRadius: "20px",
     textAlign: "center",
     padding: "60px 24px",
-    border: "1px solid #e2e8f0"
+    border: "1px solid rgba(82,139,94,0.2)"
   },
   emptyIcon: {
     width: "72px",
     height: "72px",
-    background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     borderRadius: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "28px",
-    color: "#2563eb",
+    color: "white",
     margin: "0 auto 20px"
   }
 };

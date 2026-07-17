@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
 import api from "../api";
 import {
-  FaClock, FaUserMd, FaPlus, FaTrash,
-  FaCalendarCheck, FaCheckCircle, FaBan
+  FaClock, FaUserMd, FaCalendarAlt, FaCalendarCheck, FaCheckCircle,
+  FaBan, FaSave, FaSyncAlt, FaChevronLeft, FaChevronRight, FaTrash, FaPlus
 } from "react-icons/fa";
 
+const DAYS_OF_WEEK = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+
 function DoctorSlots() {
+  const [activeTab, setActiveTab] = useState("weekly"); // "weekly" | "calendar" | "list"
   const [slots, setSlots] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [weeklySchedules, setWeeklySchedules] = useState([]);
   const [message, setMessage] = useState({ text: "", type: "" });
-  const [formData, setFormData] = useState({
-    doctorId: "", slotDate: "", startTime: "", endTime: ""
-  });
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ doctorId: "" });
+
+  // Calendar view state
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split("T")[0]);
+
+  // Manual single slot addition state (fallback if needed)
+  const [manualSlot, setManualSlot] = useState({ slotDate: "", startTime: "", endTime: "" });
 
   const role = localStorage.getItem("role");
   const username = localStorage.getItem("username");
@@ -20,13 +30,13 @@ function DoctorSlots() {
     if (role === "ADMIN") {
       loadDoctors();
     } else if (role === "DOCTOR") {
-      loadCurrentDoctorSlots();
+      loadCurrentDoctor();
     }
   }, []);
 
-  const showMsg = (text, type) => {
+  const showMsg = (text, type = "success") => {
     setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+    setTimeout(() => setMessage({ text: "", type: "" }), 4000);
   };
 
   const loadDoctors = async () => {
@@ -36,7 +46,7 @@ function DoctorSlots() {
     } catch (err) { console.error(err); }
   };
 
-  const loadCurrentDoctorSlots = async () => {
+  const loadCurrentDoctor = async () => {
     try {
       const res = await api.get("/api/doctors");
       const doctor = res.data.find(d => {
@@ -46,103 +56,168 @@ function DoctorSlots() {
         return cleaned === uname;
       });
       if (doctor) {
-        setFormData(prev => ({ ...prev, doctorId: doctor.doctorId }));
-        const slotsRes = await api.get(`/api/slots/doctor/${doctor.doctorId}`);
-        setSlots(slotsRes.data);
+        setFormData({ doctorId: doctor.doctorId });
+        loadSchedulesAndSlots(doctor.doctorId);
       }
     } catch (err) { console.error(err); }
   };
 
-  const handleDoctorChange = async (e) => {
-    const doctorId = e.target.value;
-    setFormData({ ...formData, doctorId });
-    if (doctorId) {
-      try {
-        const res = await api.get(`/api/slots/doctor/${doctorId}`);
-        setSlots(res.data);
-      } catch (err) { console.error(err); }
-    } else {
-      setSlots([]);
+  const loadSchedulesAndSlots = async (doctorId) => {
+    if (!doctorId) return;
+    setLoading(true);
+    try {
+      // 1. Load Weekly Schedule
+      const schedRes = await api.get(`/api/schedules/doctor/${doctorId}`);
+      if (schedRes.data && schedRes.data.length > 0) {
+        // Merge with full 7 days order
+        const merged = DAYS_OF_WEEK.map(day => {
+          const found = schedRes.data.find(s => s.dayOfWeek.toUpperCase() === day);
+          return found || {
+            dayOfWeek: day,
+            startTime: "09:00",
+            endTime: "17:00",
+            slotDurationMinutes: 30,
+            active: day !== "SUNDAY"
+          };
+        });
+        setWeeklySchedules(merged);
+      } else {
+        // Initialize default 7-day schedule
+        const defaults = DAYS_OF_WEEK.map(day => ({
+          dayOfWeek: day,
+          startTime: "09:00",
+          endTime: "17:00",
+          slotDurationMinutes: 30,
+          active: day !== "SUNDAY"
+        }));
+        setWeeklySchedules(defaults);
+      }
+
+      // 2. Load All Slots
+      const slotsRes = await api.get(`/api/slots/doctor/${doctorId}`);
+      setSlots(slotsRes.data || []);
+    } catch (err) {
+      console.error(err);
+      showMsg("Failed to load doctor data", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleDoctorChange = (e) => {
+    const doctorId = e.target.value;
+    setFormData({ doctorId });
+    if (doctorId) {
+      loadSchedulesAndSlots(doctorId);
+    } else {
+      setSlots([]);
+      setWeeklySchedules([]);
+    }
   };
 
-  const handleAddSlot = async () => {
-    // ✅ Fix - ADMIN doctor select பண்ணலன்னா block பண்ணு
-    if (role === "ADMIN" && !formData.doctorId) {
+  const handleScheduleChange = (index, field, value) => {
+    const updated = [...weeklySchedules];
+    updated[index] = { ...updated[index], [field]: value };
+    setWeeklySchedules(updated);
+  };
+
+  const handleSaveWeeklySchedule = async () => {
+    if (!formData.doctorId) {
       showMsg("Please select a doctor first!", "error");
       return;
     }
-    if (!formData.slotDate || !formData.startTime || !formData.endTime) {
-      showMsg("Please fill all required fields!", "error");
-      return;
+    setLoading(true);
+    try {
+      await api.post(`/api/schedules/doctor/${formData.doctorId}`, weeklySchedules);
+      await api.post(`/api/schedules/generate/${formData.doctorId}`);
+      showMsg("✅ Weekly schedule configured & future slots automatically generated for next 30 days!", "success");
+      loadSchedulesAndSlots(formData.doctorId);
+    } catch (err) {
+      console.error(err);
+      showMsg("Failed to save schedule or generate slots!", "error");
+    } finally {
+      setLoading(false);
     }
-    if (formData.startTime >= formData.endTime) {
-      showMsg("End time must be after start time!", "error");
-      return;
-    }
+  };
 
+  const handleManualAddSlot = async () => {
+    if (!formData.doctorId) {
+      showMsg("Please select a doctor first!", "error");
+      return;
+    }
+    if (!manualSlot.slotDate || !manualSlot.startTime || !manualSlot.endTime) {
+      showMsg("Please fill all required manual slot fields!", "error");
+      return;
+    }
     try {
       await api.post("/api/slots", {
         doctorId: formData.doctorId,
-        slotDate: formData.slotDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime
+        slotDate: manualSlot.slotDate,
+        startTime: manualSlot.startTime,
+        endTime: manualSlot.endTime
       });
-      showMsg("Slot added successfully!", "success");
-      setFormData(prev => ({ ...prev, slotDate: "", startTime: "", endTime: "" }));
-
-      if (role === "DOCTOR") {
-        loadCurrentDoctorSlots();
-      } else {
-        const res = await api.get(`/api/slots/doctor/${formData.doctorId}`);
-        setSlots(res.data);
-      }
+      showMsg("Slot added manually!", "success");
+      setManualSlot({ slotDate: "", startTime: "", endTime: "" });
+      loadSchedulesAndSlots(formData.doctorId);
     } catch (err) {
-      showMsg("Failed to add slot!", "error");
+      showMsg("Failed to add slot manually!", "error");
     }
   };
 
-  const handleDelete = async (slotId) => {
-    if (!window.confirm("Delete this slot?")) return;
+  const handleDeleteSlot = async (slotId) => {
+    if (!window.confirm("Are you sure you want to delete this slot?")) return;
     try {
       await api.delete(`/api/slots/${slotId}`);
-      showMsg("Slot deleted!", "success");
-      if (role === "DOCTOR") {
-        loadCurrentDoctorSlots();
-      } else {
-        const res = await api.get(`/api/slots/doctor/${formData.doctorId}`);
-        setSlots(res.data);
-      }
+      showMsg("Slot deleted successfully!", "success");
+      loadSchedulesAndSlots(formData.doctorId);
     } catch (err) {
-      showMsg("Delete failed!", "error");
+      showMsg("Failed to delete slot!", "error");
     }
   };
 
-  // ✅ Fix - ADMIN doctor select பண்ணாதவரை form disable
   const isFormReady = role === "DOCTOR" || (role === "ADMIN" && formData.doctorId);
-
   const availableCount = slots.filter(s => !s.booked).length;
   const bookedCount = slots.filter(s => s.booked).length;
 
+  // Calendar Helpers
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sun
+    const daysCount = new Date(year, month + 1, 0).getDate();
+    return { firstDay, daysCount, year, month };
+  };
+
+  const { firstDay, daysCount, year, month } = getDaysInMonth(currentMonth);
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const getSlotsForDate = (dateStr) => {
+    return slots.filter(s => s.slotDate === dateStr);
+  };
+
+  const getDateStatus = (dateStr) => {
+    if (dateStr < todayStr) return { color: "#cbd5e1", bg: "#f1f5f9", label: "Past Date", type: "gray" };
+    const daySlots = getSlotsForDate(dateStr);
+    if (daySlots.length === 0) return { color: "#94a3b8", bg: "#f8fafc", label: "No Schedule", type: "neutral" };
+    const freeSlots = daySlots.filter(s => !s.booked);
+    if (freeSlots.length === 0) return { color: "#dc2626", bg: "#fee2e2", label: "Fully Booked", type: "red" };
+    if (freeSlots.length <= 2) return { color: "#d97706", bg: "#fef3c7", label: `Few Slots (${freeSlots.length})`, type: "yellow" };
+    return { color: "#15803d", bg: "#dcfce7", label: `Available (${freeSlots.length})`, type: "green" };
+  };
+
   return (
     <div style={styles.wrapper}>
-
       {/* ===== HEADER ===== */}
       <div style={styles.pageHeader}>
         <div style={styles.headerLeft}>
           <div style={styles.headerIcon}>
-            <FaClock />
+            <FaCalendarAlt />
           </div>
           <div>
-            <h1 style={styles.pageTitle}>Availability Slots</h1>
+            <h1 style={styles.pageTitle}>Hospital-Grade Scheduling System</h1>
             <p style={styles.pageSubtitle}>
-              {role === "ADMIN"
-                ? "Manage doctor availability slots"
-                : "Manage your availability slots"}
+              Configure recurring weekly working hours and monitor dynamic color-coded slot calendars
             </p>
           </div>
         </div>
@@ -159,165 +234,379 @@ function DoctorSlots() {
         </div>
       )}
 
-      {/* ===== ADMIN - Doctor Selector ===== */}
+      {/* ===== ADMIN Doctor Selector ===== */}
       {role === "ADMIN" && (
         <div style={styles.doctorSelectCard}>
           <label style={styles.selectLabel}>
-            <FaUserMd style={{ color: "#2563eb" }} />
-            Select Doctor
+            <FaUserMd style={{ color: "#35663f" }} />
+            Select Doctor to Configure Working Schedule & Slots
           </label>
           <select
             value={formData.doctorId}
             onChange={handleDoctorChange}
             style={styles.doctorSelect}
           >
-            <option value="">-- Choose a doctor to manage slots --</option>
+            <option value="">-- Choose Doctor --</option>
             {doctors.map(d => (
               <option key={d.doctorId} value={d.doctorId}>
-                {d.doctorName} - {d.specialization}
+                {d.doctorName} — ({d.specialization})
               </option>
             ))}
           </select>
         </div>
       )}
 
-      {/* ===== Summary (only when doctor selected/logged) ===== */}
-      {isFormReady && (
-        <div style={styles.summaryGrid}>
-          <div style={{ ...styles.summaryCard, background: "linear-gradient(135deg, #059669, #10b981)" }}>
-            <FaCheckCircle style={styles.summaryIcon} />
-            <div>
-              <p style={styles.summaryLabel}>Available Slots</p>
-              <h2 style={styles.summaryCount}>{availableCount}</h2>
+      {/* ===== TABS & SUMMARY ===== */}
+      {isFormReady ? (
+        <>
+          <div style={styles.summaryGrid}>
+            <div style={{ ...styles.summaryCard, background: "linear-gradient(135deg, #059669, #10b981)" }}>
+              <FaCheckCircle style={styles.summaryIcon} />
+              <div>
+                <p style={styles.summaryLabel}>Available Slots</p>
+                <h2 style={styles.summaryCount}>{availableCount}</h2>
+              </div>
+            </div>
+            <div style={{ ...styles.summaryCard, background: "linear-gradient(135deg, #b91c1c, #dc2626)" }}>
+              <FaBan style={styles.summaryIcon} />
+              <div>
+                <p style={styles.summaryLabel}>Booked Slots</p>
+                <h2 style={styles.summaryCount}>{bookedCount}</h2>
+              </div>
+            </div>
+            <div style={{ ...styles.summaryCard, background: "linear-gradient(135deg, #35663f, #528b5e)" }}>
+              <FaCalendarCheck style={styles.summaryIcon} />
+              <div>
+                <p style={styles.summaryLabel}>Total Generated Slots</p>
+                <h2 style={styles.summaryCount}>{slots.length}</h2>
+              </div>
             </div>
           </div>
-          <div style={{ ...styles.summaryCard, background: "linear-gradient(135deg, #b91c1c, #dc2626)" }}>
-            <FaBan style={styles.summaryIcon} />
-            <div>
-              <p style={styles.summaryLabel}>Booked Slots</p>
-              <h2 style={styles.summaryCount}>{bookedCount}</h2>
-            </div>
-          </div>
-          <div style={{ ...styles.summaryCard, background: "linear-gradient(135deg, #1e40af, #2563eb)" }}>
-            <FaCalendarCheck style={styles.summaryIcon} />
-            <div>
-              <p style={styles.summaryLabel}>Total Slots</p>
-              <h2 style={styles.summaryCount}>{slots.length}</h2>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* ===== Add Slot Form ===== */}
-      {!isFormReady && role === "ADMIN" ? (
-        <div style={styles.disabledNote}>
-          <FaUserMd style={{ fontSize: "24px", color: "#94a3b8" }} />
-          <p>Select a doctor above to manage their availability slots</p>
-        </div>
-      ) : (
-        <div style={styles.formCard}>
-          <h3 style={styles.formTitle}>Add New Slot</h3>
-          <div style={styles.formRow}>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Date</label>
-              <input
-                type="date"
-                name="slotDate"
-                value={formData.slotDate}
-                onChange={handleChange}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Start Time</label>
-              <input
-                type="time"
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleChange}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>End Time</label>
-              <input
-                type="time"
-                name="endTime"
-                value={formData.endTime}
-                onChange={handleChange}
-                style={styles.input}
-              />
-            </div>
-
-            <button style={styles.addBtn} onClick={handleAddSlot}>
-              <FaPlus /> Add Slot
+          <div style={styles.tabHeader}>
+            <button
+              style={{ ...styles.tabBtn, ...(activeTab === "weekly" ? styles.activeTabBtn : {}) }}
+              onClick={() => setActiveTab("weekly")}
+            >
+              <FaClock /> Weekly Working Schedule Config
+            </button>
+            <button
+              style={{ ...styles.tabBtn, ...(activeTab === "calendar" ? styles.activeTabBtn : {}) }}
+              onClick={() => setActiveTab("calendar")}
+            >
+              <FaCalendarAlt /> Monthly Color-Coded Calendar
+            </button>
+            <button
+              style={{ ...styles.tabBtn, ...(activeTab === "list" ? styles.activeTabBtn : {}) }}
+              onClick={() => setActiveTab("list")}
+            >
+              <FaSyncAlt /> All Slots List & Manual Overrides
             </button>
           </div>
-        </div>
-      )}
 
-      {/* ===== Slots Table ===== */}
-      {isFormReady && (
-        <div style={styles.tableCard}>
-          {slots.length === 0 ? (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}><FaClock /></div>
-              <h3>No Slots Added Yet</h3>
-              <p>Add your first availability slot above</p>
-            </div>
-          ) : (
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.thead}>
-                  <th style={styles.th}>Date</th>
-                  <th style={styles.th}>Time</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {slots.map(slot => (
-                  <tr key={slot.slotId} style={styles.tr}>
-                    <td style={styles.td}>
-                      <div style={styles.dateCell}>
-                        <FaCalendarCheck style={{ color: "#94a3b8", fontSize: "12px" }} />
-                        {slot.slotDate}
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <div style={styles.timeCell}>
-                        <FaClock style={{ color: "#94a3b8", fontSize: "12px" }} />
-                        {slot.startTime} - {slot.endTime}
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.statusBadge,
-                        background: slot.booked ? "#fee2e2" : "#dcfce7",
-                        color: slot.booked ? "#dc2626" : "#15803d"
-                      }}>
-                        {slot.booked ? <FaBan /> : <FaCheckCircle />}
-                        {slot.booked ? "Booked" : "Available"}
+          {/* ===== TAB 1: WEEKLY SCHEDULE CONFIG ===== */}
+          {activeTab === "weekly" && (
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <h3 style={styles.cardTitle}>Set Weekly Working Schedule</h3>
+                  <p style={styles.cardSubtitle}>
+                    Configure working hours once. The backend automatically generates slots and hides past/disabled times.
+                  </p>
+                </div>
+                <button
+                  style={styles.saveBtn}
+                  onClick={handleSaveWeeklySchedule}
+                  disabled={loading}
+                >
+                  <FaSave /> {loading ? "Generating..." : "Save Schedule & Auto-Generate Slots"}
+                </button>
+              </div>
+
+              <div style={styles.scheduleGrid}>
+                {weeklySchedules.map((sched, idx) => (
+                  <div
+                    key={sched.dayOfWeek}
+                    style={{
+                      ...styles.dayCard,
+                      border: sched.active ? "2px solid #7c3aed" : "1px solid #e2e8f0",
+                      background: sched.active ? "white" : "#f8fafc",
+                      opacity: sched.active ? 1 : 0.7
+                    }}
+                  >
+                    <div style={styles.dayCardHeader}>
+                      <span style={{ fontWeight: "800", color: sched.active ? "#7c3aed" : "#64748b", fontSize: "15px" }}>
+                        {sched.dayOfWeek}
                       </span>
-                    </td>
-                    <td style={styles.td}>
-                      {!slot.booked && (
-                        <button
-                          style={styles.deleteBtn}
-                          onClick={() => handleDelete(slot.slotId)}
-                        >
-                          <FaTrash /> Delete
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                      <label style={styles.toggleWrapper}>
+                        <input
+                          type="checkbox"
+                          checked={sched.active}
+                          onChange={(e) => handleScheduleChange(idx, "active", e.target.checked)}
+                          style={{ cursor: "pointer", transform: "scale(1.2)" }}
+                        />
+                        <span style={{ fontSize: "13px", fontWeight: "600", color: sched.active ? "#15803d" : "#64748b" }}>
+                          {sched.active ? "Active" : "Off"}
+                        </span>
+                      </label>
+                    </div>
+
+                    {sched.active ? (
+                      <div style={styles.dayCardBody}>
+                        <div style={styles.formGroupMini}>
+                          <label style={styles.miniLabel}>Start Time</label>
+                          <input
+                            type="time"
+                            value={sched.startTime}
+                            onChange={(e) => handleScheduleChange(idx, "startTime", e.target.value)}
+                            style={styles.inputMini}
+                          />
+                        </div>
+                        <div style={styles.formGroupMini}>
+                          <label style={styles.miniLabel}>End Time</label>
+                          <input
+                            type="time"
+                            value={sched.endTime}
+                            onChange={(e) => handleScheduleChange(idx, "endTime", e.target.value)}
+                            style={styles.inputMini}
+                          />
+                        </div>
+                        <div style={styles.formGroupMini}>
+                          <label style={styles.miniLabel}>Duration</label>
+                          <select
+                            value={sched.slotDurationMinutes}
+                            onChange={(e) => handleScheduleChange(idx, "slotDurationMinutes", Number(e.target.value))}
+                            style={styles.inputMini}
+                          >
+                            <option value={15}>15 mins</option>
+                            <option value={30}>30 mins</option>
+                            <option value={60}>60 mins</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={styles.offNote}>Day Off / Inactive Schedule</div>
+                    )}
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           )}
+
+          {/* ===== TAB 2: MONTHLY COLOR-CODED CALENDAR ===== */}
+          {activeTab === "calendar" && (
+            <div style={styles.calendarContainer}>
+              <div style={styles.calendarCard}>
+                <div style={styles.calendarHeader}>
+                  <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
+                    {monthNames[month]} {year}
+                  </h3>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      style={styles.navBtn}
+                      onClick={() => setCurrentMonth(new Date(year, month - 1, 1))}
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <button
+                      style={styles.navBtn}
+                      onClick={() => setCurrentMonth(new Date())}
+                    >
+                      Today
+                    </button>
+                    <button
+                      style={styles.navBtn}
+                      onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div style={styles.legendBar}>
+                  <div style={styles.legendItem}><span style={{ ...styles.legendDot, background: "#10b981" }}></span> Green: Available (3+ slots)</div>
+                  <div style={styles.legendItem}><span style={{ ...styles.legendDot, background: "#f59e0b" }}></span> Yellow: Few Slots Left (1-2)</div>
+                  <div style={styles.legendItem}><span style={{ ...styles.legendDot, background: "#ef4444" }}></span> Red: Fully Booked (0 slots)</div>
+                  <div style={styles.legendItem}><span style={{ ...styles.legendDot, background: "#94a3b8" }}></span> Gray: Past Date</div>
+                </div>
+
+                {/* Calendar Grid Header */}
+                <div style={styles.calendarGridHeader}>
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
+                    <div key={d} style={styles.gridHeaderCell}>{d}</div>
+                  ))}
+                </div>
+
+                {/* Calendar Grid Cells */}
+                <div style={styles.calendarGrid}>
+                  {Array.from({ length: firstDay }).map((_, idx) => (
+                    <div key={`empty-${idx}`} style={styles.emptyGridCell} />
+                  ))}
+                  {Array.from({ length: daysCount }).map((_, idx) => {
+                    const dayNum = idx + 1;
+                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+                    const status = getDateStatus(dateStr);
+                    const isSelected = selectedDateStr === dateStr;
+
+                    return (
+                      <div
+                        key={dateStr}
+                        onClick={() => setSelectedDateStr(dateStr)}
+                        style={{
+                          ...styles.gridCell,
+                          background: isSelected ? "#e0e7ff" : status.bg,
+                          border: isSelected ? "2px solid #6366f1" : `1px solid ${status.color}`,
+                          opacity: status.type === "gray" ? 0.6 : 1
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontWeight: "800", fontSize: "16px", color: "#0f172a" }}>{dayNum}</span>
+                          {dateStr === todayStr && <span style={styles.todayTag}>Today</span>}
+                        </div>
+                        <div style={{ ...styles.statusPill, color: status.color }}>
+                          {status.label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Day Details Panel */}
+              <div style={styles.dayDetailsPanel}>
+                <h3 style={styles.panelTitle}>
+                  Slots for {selectedDateStr}
+                </h3>
+                {getSlotsForDate(selectedDateStr).length === 0 ? (
+                  <div style={styles.emptyPanel}>
+                    No slots generated for this date. Check your Weekly Schedule config.
+                  </div>
+                ) : (
+                  <div style={styles.timePillsGrid}>
+                    {getSlotsForDate(selectedDateStr).map(slot => (
+                      <div
+                        key={slot.slotId}
+                        style={{
+                          ...styles.timePill,
+                          background: slot.booked ? "#fee2e2" : "#dcfce7",
+                          border: slot.booked ? "1px solid #ef4444" : "1px solid #10b981"
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: "700", fontSize: "14px", color: slot.booked ? "#991b1b" : "#065f46" }}>
+                            <FaClock style={{ marginRight: "6px" }} />
+                            {slot.startTime} - {slot.endTime}
+                          </div>
+                          <span style={{ fontSize: "12px", fontWeight: "600", color: slot.booked ? "#dc2626" : "#15803d" }}>
+                            {slot.booked ? "🔴 Booked Out" : "🟢 Available"}
+                          </span>
+                        </div>
+                        {!slot.booked && (
+                          <button
+                            style={styles.miniDeleteBtn}
+                            onClick={() => handleDeleteSlot(slot.slotId)}
+                            title="Delete slot"
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ===== TAB 3: ALL SLOTS LIST & MANUAL OVERRIDE ===== */}
+          {activeTab === "list" && (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>Manual Override / Single Slot Addition</h3>
+              <p style={styles.cardSubtitle}>
+                Need to add an ad-hoc slot outside your weekly recurring schedule? You can add it here.
+              </p>
+              <div style={styles.manualForm}>
+                <input
+                  type="date"
+                  value={manualSlot.slotDate}
+                  onChange={(e) => setManualSlot({ ...manualSlot, slotDate: e.target.value })}
+                  style={styles.input}
+                />
+                <input
+                  type="time"
+                  value={manualSlot.startTime}
+                  onChange={(e) => setManualSlot({ ...manualSlot, startTime: e.target.value })}
+                  style={styles.input}
+                />
+                <input
+                  type="time"
+                  value={manualSlot.endTime}
+                  onChange={(e) => setManualSlot({ ...manualSlot, endTime: e.target.value })}
+                  style={styles.input}
+                />
+                <button style={styles.addBtn} onClick={handleManualAddSlot}>
+                  <FaPlus /> Add Manual Slot
+                </button>
+              </div>
+
+              <hr style={{ margin: "24px 0", border: "0.5px solid #e2e8f0" }} />
+
+              <h3 style={styles.cardTitle}>All Generated Slots ({slots.length})</h3>
+              <div style={styles.tableCard}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.thead}>
+                      <th style={styles.th}>Date</th>
+                      <th style={styles.th}>Time Window</th>
+                      <th style={styles.th}>Status</th>
+                      <th style={styles.th}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slots.map(slot => (
+                      <tr key={slot.slotId} style={styles.tr}>
+                        <td style={styles.td}>
+                          <FaCalendarCheck style={{ color: "#94a3b8", marginRight: "8px" }} />
+                          {slot.slotDate}
+                        </td>
+                        <td style={styles.td}>
+                          <FaClock style={{ color: "#94a3b8", marginRight: "8px" }} />
+                          {slot.startTime} - {slot.endTime}
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{
+                            ...styles.statusBadge,
+                            background: slot.booked ? "#fee2e2" : "#dcfce7",
+                            color: slot.booked ? "#dc2626" : "#15803d"
+                          }}>
+                            {slot.booked ? <FaBan /> : <FaCheckCircle />}
+                            {slot.booked ? "Booked" : "Available"}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          {!slot.booked && (
+                            <button
+                              style={styles.deleteBtn}
+                              onClick={() => handleDeleteSlot(slot.slotId)}
+                            >
+                              <FaTrash /> Delete
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={styles.disabledNote}>
+          <FaUserMd style={{ fontSize: "36px", color: "#94a3b8" }} />
+          <h3>Please Select a Doctor Above</h3>
+          <p>Choose a doctor to configure their recurring working schedule and monitor hospital slots.</p>
         </div>
       )}
     </div>
@@ -328,7 +617,7 @@ const styles = {
   wrapper: {
     padding: "28px 32px",
     minHeight: "100vh",
-    background: "#f1f5f9",
+    background: "#f8fafc",
     fontFamily: "'Inter', sans-serif"
   },
   pageHeader: {
@@ -349,7 +638,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "22px",
+    fontSize: "24px",
     color: "white",
     boxShadow: "0 4px 12px rgba(124,58,237,0.3)"
   },
@@ -362,7 +651,7 @@ const styles = {
   pageSubtitle: {
     fontSize: "14px",
     color: "#64748b",
-    margin: "2px 0 0"
+    margin: "4px 0 0"
   },
   message: {
     padding: "14px 18px",
@@ -383,15 +672,15 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#374151",
+    fontSize: "14px",
+    fontWeight: "700",
+    color: "#1e293b",
     marginBottom: "10px"
   },
   doctorSelect: {
     width: "100%",
     padding: "12px 14px",
-    border: "1.5px solid #e2e8f0",
+    border: "1.5px solid #cbd5e1",
     borderRadius: "10px",
     fontSize: "14px",
     fontFamily: "'Inter', sans-serif",
@@ -411,168 +700,313 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "14px",
-    color: "white"
+    color: "white",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
   },
-  summaryIcon: {
-    fontSize: "24px",
-    opacity: 0.85
-  },
-  summaryLabel: {
-    fontSize: "12px",
-    opacity: 0.85,
-    margin: "0 0 3px"
-  },
-  summaryCount: {
-    fontSize: "26px",
-    fontWeight: "800",
-    margin: 0
-  },
-  disabledNote: {
-    background: "white",
-    padding: "40px",
-    borderRadius: "16px",
-    textAlign: "center",
-    border: "1px dashed #cbd5e1",
+  summaryIcon: { fontSize: "28px", opacity: 0.85 },
+  summaryLabel: { fontSize: "13px", opacity: 0.9, margin: "0 0 4px" },
+  summaryCount: { fontSize: "28px", fontWeight: "800", margin: 0 },
+  tabHeader: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
     gap: "12px",
-    color: "#64748b",
-    marginBottom: "20px"
+    marginBottom: "20px",
+    borderBottom: "2px solid #e2e8f0",
+    paddingBottom: "12px"
   },
-  formCard: {
+  tabBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 20px",
+    borderRadius: "10px",
+    border: "none",
+    background: "transparent",
+    color: "#64748b",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+    transition: "all 0.2s"
+  },
+  activeTabBtn: {
+    background: "#7c3aed",
+    color: "white",
+    boxShadow: "0 4px 12px rgba(124,58,237,0.3)"
+  },
+  card: {
     background: "white",
     padding: "24px",
     borderRadius: "16px",
+    boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
+    border: "1px solid #e2e8f0",
+    marginBottom: "24px"
+  },
+  cardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: "20px",
+    flexWrap: "wrap",
+    gap: "12px"
+  },
+  cardTitle: { fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: 0 },
+  cardSubtitle: { fontSize: "13px", color: "#64748b", margin: "4px 0 0" },
+  saveBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "linear-gradient(135deg, #16a34a, #15803d)",
+    color: "white",
+    border: "none",
+    padding: "12px 24px",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(22,163,74,0.3)"
+  },
+  scheduleGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px"
+  },
+  dayCard: {
+    borderRadius: "14px",
+    padding: "16px",
+    transition: "all 0.2s"
+  },
+  dayCardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "14px",
+    borderBottom: "1px solid #e2e8f0",
+    paddingBottom: "10px"
+  },
+  toggleWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px"
+  },
+  dayCardBody: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px"
+  },
+  formGroupMini: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px"
+  },
+  miniLabel: { fontSize: "12px", fontWeight: "600", color: "#475569" },
+  inputMini: {
+    padding: "8px 10px",
+    borderRadius: "8px",
+    border: "1px solid #cbd5e1",
+    fontSize: "13px",
+    fontFamily: "'Inter', sans-serif"
+  },
+  offNote: {
+    padding: "20px",
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: "13px",
+    fontWeight: "600"
+  },
+  calendarContainer: {
+    display: "grid",
+    gridTemplateColumns: "2.2fr 1fr",
+    gap: "24px"
+  },
+  calendarCard: {
+    background: "white",
+    padding: "24px",
+    borderRadius: "16px",
     boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
     border: "1px solid #e2e8f0"
   },
-  formTitle: {
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#0f172a",
+  calendarHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: "16px"
   },
-  formRow: {
-    display: "flex",
-    gap: "14px",
-    alignItems: "flex-end",
-    flexWrap: "wrap"
+  navBtn: {
+    padding: "8px 14px",
+    borderRadius: "8px",
+    border: "1px solid #cbd5e1",
+    background: "white",
+    cursor: "pointer",
+    fontWeight: "700",
+    fontSize: "13px",
+    color: "#334155"
   },
-  formGroup: {
+  legendBar: {
+    display: "flex",
+    gap: "16px",
+    flexWrap: "wrap",
+    padding: "10px 14px",
+    background: "#f8fafc",
+    borderRadius: "10px",
+    marginBottom: "16px",
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#475569"
+  },
+  legendItem: { display: "flex", alignItems: "center", gap: "6px" },
+  legendDot: { width: "10px", height: "10px", borderRadius: "50%", display: "inline-block" },
+  calendarGridHeader: {
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    background: "#f1f5f9",
+    borderRadius: "8px",
+    padding: "8px 0",
+    textAlign: "center",
+    fontWeight: "700",
+    fontSize: "13px",
+    color: "#475569",
+    marginBottom: "8px"
+  },
+  calendarGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    gap: "8px"
+  },
+  emptyGridCell: { minHeight: "85px", background: "#f8fafc", borderRadius: "10px" },
+  gridCell: {
+    minHeight: "85px",
+    padding: "10px",
+    borderRadius: "10px",
+    cursor: "pointer",
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
-    minWidth: "150px"
+    justifyContent: "space-between",
+    transition: "transform 0.1s, box-shadow 0.1s"
   },
-  label: {
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#374151"
+  todayTag: {
+    background: "#6366f1",
+    color: "white",
+    fontSize: "10px",
+    fontWeight: "800",
+    padding: "2px 6px",
+    borderRadius: "4px"
+  },
+  statusPill: {
+    fontSize: "11px",
+    fontWeight: "700",
+    textAlign: "center",
+    padding: "4px",
+    borderRadius: "6px",
+    marginTop: "6px"
+  },
+  dayDetailsPanel: {
+    background: "white",
+    padding: "24px",
+    borderRadius: "16px",
+    boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
+    border: "1px solid #e2e8f0",
+    display: "flex",
+    flexDirection: "column",
+    maxHeight: "650px",
+    overflowY: "auto"
+  },
+  panelTitle: { fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: "0 0 16px" },
+  emptyPanel: {
+    textAlign: "center",
+    color: "#94a3b8",
+    padding: "40px 16px",
+    fontSize: "14px"
+  },
+  timePillsGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px"
+  },
+  timePill: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.03)"
+  },
+  miniDeleteBtn: {
+    background: "#ef4444",
+    color: "white",
+    border: "none",
+    width: "32px",
+    height: "32px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  manualForm: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "16px",
+    flexWrap: "wrap",
+    alignItems: "center"
   },
   input: {
     padding: "10px 14px",
-    border: "1.5px solid #e2e8f0",
+    border: "1.5px solid #cbd5e1",
     borderRadius: "10px",
     fontSize: "14px",
-    fontFamily: "'Inter', sans-serif",
-    color: "#0f172a",
-    background: "#f8fafc",
-    outline: "none"
+    fontFamily: "'Inter', sans-serif"
   },
   addBtn: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "linear-gradient(135deg, #7c3aed, #8b5cf6)",
+    background: "#7c3aed",
     color: "white",
     border: "none",
-    padding: "11px 22px",
+    padding: "11px 20px",
     borderRadius: "10px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    fontFamily: "'Inter', sans-serif",
-    boxShadow: "0 4px 12px rgba(124,58,237,0.3)"
+    fontWeight: "700",
+    cursor: "pointer"
   },
   tableCard: {
     background: "white",
-    borderRadius: "16px",
-    boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
-    border: "1px solid #e2e8f0",
-    overflow: "hidden"
+    borderRadius: "12px",
+    overflow: "hidden",
+    border: "1px solid #e2e8f0"
   },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse"
-  },
+  table: { width: "100%", borderCollapse: "collapse" },
   thead: { background: "#f8fafc" },
-  th: {
-    padding: "14px 18px",
-    textAlign: "left",
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#64748b",
-    letterSpacing: "0.8px",
-    textTransform: "uppercase",
-    borderBottom: "1px solid #e2e8f0"
-  },
-  tr: { background: "white" },
-  td: {
-    padding: "14px 18px",
-    fontSize: "14px",
-    color: "#334155",
-    borderBottom: "1px solid #f1f5f9"
-  },
-  dateCell: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px"
-  },
-  timeCell: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px"
-  },
+  th: { padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#64748b", borderBottom: "1px solid #e2e8f0" },
+  tr: { borderBottom: "1px solid #f1f5f9" },
+  td: { padding: "12px 16px", fontSize: "14px", color: "#334155" },
   statusBadge: {
     display: "inline-flex",
     alignItems: "center",
     gap: "6px",
-    padding: "5px 12px",
+    padding: "4px 10px",
     borderRadius: "20px",
     fontSize: "12px",
-    fontWeight: "600"
+    fontWeight: "700"
   },
   deleteBtn: {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    background: "linear-gradient(135deg, #b91c1c, #dc2626)",
+    background: "#ef4444",
     color: "white",
     border: "none",
     padding: "6px 12px",
     borderRadius: "8px",
     fontSize: "12px",
     fontWeight: "600",
-    cursor: "pointer",
-    fontFamily: "'Inter', sans-serif"
+    cursor: "pointer"
   },
-  emptyState: {
+  disabledNote: {
+    background: "white",
+    padding: "60px 24px",
+    borderRadius: "16px",
     textAlign: "center",
-    padding: "48px 24px"
-  },
-  emptyIcon: {
-    width: "64px",
-    height: "64px",
-    background: "linear-gradient(135deg, #ede9fe, #ddd6fe)",
-    borderRadius: "18px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "26px",
-    color: "#7c3aed",
-    margin: "0 auto 16px"
+    border: "1px dashed #cbd5e1",
+    color: "#64748b"
   }
 };
 

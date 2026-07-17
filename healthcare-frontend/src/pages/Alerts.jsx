@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../api";
 import {
   FaBell, FaExclamationTriangle, FaUserInjured,
-  FaClock, FaShieldAlt, FaSearch, FaTimes
+  FaClock, FaShieldAlt, FaSearch, FaTimes, FaTrash
 } from "react-icons/fa";
 
 function Alerts() {
@@ -78,6 +78,28 @@ function Alerts() {
             </p>
           </div>
         </div>
+        {alerts.length > 0 && (
+          <button
+            onClick={async () => {
+              if (window.confirm("Are you sure you want to clear all emergency alerts?")) {
+                try {
+                  await api.delete("/api/alerts/clear-all");
+                  setAlerts([]);
+                } catch (err) {
+                  console.error("Failed to clear alerts", err);
+                  alert("Could not clear alerts.");
+                }
+              }
+            }}
+            style={{
+              background: '#dc2626', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '10px',
+              fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px',
+              boxShadow: '0 4px 12px rgba(220,38,38,0.3)'
+            }}
+          >
+            <FaTrash /> Clear All Alerts
+          </button>
+        )}
       </div>
 
       {/* ===== SUMMARY CARDS ===== */}
@@ -108,8 +130,8 @@ function Alerts() {
 
         <div style={{
           ...styles.summaryCard,
-          background: "linear-gradient(135deg, #1e40af, #2563eb)",
-          boxShadow: "0 8px 20px rgba(37,99,235,0.3)"
+          background: "linear-gradient(135deg, #35663f, #528b5e)",
+          boxShadow: "0 8px 20px rgba(82,139,94,0.3)"
         }}>
           <FaBell style={styles.summaryIcon} />
           <div>
@@ -192,12 +214,41 @@ function Alerts() {
                   </div>
 
                   <div style={styles.alertRight}>
-                    <span style={{
-                      ...styles.severityBadge,
-                      background: config.badgeBg
-                    }}>
-                      {config.label}
-                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{
+                        ...styles.severityBadge,
+                        background: config.badgeBg
+                      }}>
+                        {config.label}
+                      </span>
+                      <button
+                        onClick={() => window.open(`https://www.google.com/maps?q=18.5204,73.8567`, '_blank')}
+                        style={{
+                          background: '#ef4444', border: 'none', color: '#ffffff', cursor: 'pointer',
+                          fontSize: '12px', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', display: 'flex', alignItems: 'center'
+                        }}
+                        title="Open Live Location"
+                      >
+                        📍 Open Live Location
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.delete(`/api/alerts/${alert.alertId}`);
+                            setAlerts(prev => prev.filter(a => a.alertId !== alert.alertId));
+                          } catch (err) {
+                            console.error("Failed to delete alert", err);
+                          }
+                        }}
+                        style={{
+                          background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer',
+                          fontSize: '15px', padding: '4px', display: 'flex', alignItems: 'center'
+                        }}
+                        title="Delete Alert"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
                     <div style={styles.alertTime}>
                       <FaClock style={{ fontSize: "11px" }} />
                       {alert.createdAt

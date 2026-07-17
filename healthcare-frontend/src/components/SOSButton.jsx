@@ -10,46 +10,60 @@ export default function SOSButton({ patientId, doctorId }) {
   const [message, setMessage] = useState("Emergency! I need help immediately.");
 
   const handleSOS = async () => {
-    if (!patientId || !doctorId) {
+    if (!patientId) {
       setStatus("error");
-      setMessage("Missing patient or doctor info.");
+      setMessage("Missing patient info.");
       return;
     }
 
     setLoading(true);
     setStatus(null);
 
-    try {
-      const token = localStorage.getItem("token"); // plain token, no JSON.stringify
+    const sendRequest = async (lat = 18.5204, lng = 73.8567) => {
+      try {
+        const token = localStorage.getItem("token");
 
-      const params = new URLSearchParams({
-        patientId: patientId,
-        doctorId: doctorId,
-        message: message,
-      });
+        const params = new URLSearchParams({
+          patientId: patientId,
+          ...(doctorId ? { doctorId: doctorId } : {}),
+          message: message,
+          latitude: lat,
+          longitude: lng
+        });
 
-      const response = await fetch(
-        `http://localhost:8080/api/emergency?${params.toString()}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await fetch(
+          `http://localhost:8080/api/emergency?${params.toString()}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+        const data = await response.json();
+        console.log("Emergency raised:", data);
+        setStatus("success");
+      } catch (err) {
+        console.error("SOS Error:", err);
+        setStatus("error");
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      console.log("Emergency raised:", data);
-      setStatus("success");
-    } catch (err) {
-      console.error("SOS Error:", err);
-      setStatus("error");
-    } finally {
-      setLoading(false);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => sendRequest(pos.coords.latitude, pos.coords.longitude),
+        () => sendRequest(18.5204, 73.8567),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      sendRequest(18.5204, 73.8567);
     }
   };
 
@@ -85,25 +99,41 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "8px",
+    gap: "10px",
   },
   button: {
-    backgroundColor: "#dc2626",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    background: "linear-gradient(135deg, #b91c1c, #dc2626)",
     color: "#fff",
-    fontWeight: "bold",
+    fontFamily: "'Outfit', sans-serif",
+    fontWeight: "800",
     fontSize: "16px",
-    padding: "14px 28px",
-    borderRadius: "999px",
+    padding: "15px 32px",
+    borderRadius: "99px",
     border: "none",
     cursor: "pointer",
-    boxShadow: "0 4px 12px rgba(220, 38, 38, 0.4)",
+    boxShadow: "0 8px 24px rgba(220, 38, 38, 0.45)",
+    transition: "all .25s ease",
+    letterSpacing: ".2px",
   },
   successText: {
     color: "#16a34a",
-    fontWeight: 500,
+    fontWeight: 600,
+    fontSize: "13.5px",
+    background: "#dcfce7",
+    padding: "8px 16px",
+    borderRadius: "99px",
+    border: "1px solid #bbf7d0",
   },
   errorText: {
     color: "#dc2626",
-    fontWeight: 500,
+    fontWeight: 600,
+    fontSize: "13.5px",
+    background: "#fee2e2",
+    padding: "8px 16px",
+    borderRadius: "99px",
+    border: "1px solid #fecaca",
   },
 };

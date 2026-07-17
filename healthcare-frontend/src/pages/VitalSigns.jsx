@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api";
+import "./VitalSigns.css";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
@@ -314,7 +315,7 @@ export default function VitalSigns() {
       {/* ===== PATIENT SELECTOR ===== */}
       <div style={s.selectorCard}>
         <div style={s.selectorHeader}>
-          <FaUserInjured style={{ color: "#2563eb" }} />
+          <FaUserInjured style={{ color: "#35663f" }} />
           <h3 style={s.selectorTitle}>Select Patient to Monitor</h3>
         </div>
         <div style={s.patientBtns}>
@@ -329,13 +330,13 @@ export default function VitalSigns() {
               style={{
                 ...s.patientBtn,
                 background: selectedPatient?.patientId === p.patientId
-                  ? "linear-gradient(135deg, #1e40af, #2563eb)" : "white",
+                  ? "linear-gradient(135deg, #35663f, #528b5e)" : "white",
                 color: selectedPatient?.patientId === p.patientId
                   ? "white" : "#374151",
                 borderColor: selectedPatient?.patientId === p.patientId
-                  ? "#2563eb" : "#e2e8f0",
+                  ? "#528b5e" : "#e2e8f0",
                 boxShadow: selectedPatient?.patientId === p.patientId
-                  ? "0 4px 12px rgba(37,99,235,0.3)" : "none"
+                  ? "0 4px 12px rgba(82,139,94,0.3)" : "none"
               }}
             >
               <div style={{
@@ -506,19 +507,19 @@ export default function VitalSigns() {
                 </div>
 
                 {/* Blood Pressure */}
-                <div style={{ ...s.statCard, background: "#eff6ff", borderColor: "#bfdbfe" }}>
+                <div style={{ ...s.statCard, background: "#edf7ed", borderColor: "#c3e6cb" }}>
                   <div style={s.statIconWrap}>
-                    <FaTint style={{ color: "#2563eb", fontSize: "20px" }} />
+                    <FaTint style={{ color: "#35663f", fontSize: "20px" }} />
                   </div>
-                  <div style={{ ...s.statValue, color: "#2563eb", fontSize: "26px" }}>
+                  <div style={{ ...s.statValue, color: "#35663f", fontSize: "26px" }}>
                     {latestVital.bloodPressure || "-"}
                   </div>
                   <div style={s.statUnit}>mmHg</div>
                   <div style={s.statLabel}>Blood Pressure</div>
                   <div style={{
                     ...s.statStatus,
-                    background: "#eff6ff",
-                    color: "#2563eb"
+                    background: "#edf7ed",
+                    color: "#35663f"
                   }}>
                     Recorded
                   </div>
@@ -775,14 +776,14 @@ const s = {
     justifyContent: "center",
     gap: "8px",
     padding: "11px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     borderRadius: "10px",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    fontFamily: "'Inter', sans-serif"
+    fontFamily: "'Outfit', sans-serif"
   },
   pageHeader: {
     display: "flex",
@@ -822,7 +823,7 @@ const s = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     padding: "12px 22px",
@@ -830,8 +831,8 @@ const s = {
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    fontFamily: "'Inter', sans-serif",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)"
+    fontFamily: "'Outfit', sans-serif",
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)"
   },
   selectorCard: {
     background: "white",
@@ -1021,13 +1022,13 @@ const s = {
   graphIcon: {
     width: "44px",
     height: "44px",
-    background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+    background: "linear-gradient(135deg, #edf7ed, #c3e6cb)",
     borderRadius: "12px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "18px",
-    color: "#2563eb"
+    color: "#35663f"
   },
   liveBadge: {
     display: "flex",
@@ -1077,13 +1078,13 @@ const s = {
   emptyIcon: {
     width: "72px",
     height: "72px",
-    background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+    background: "linear-gradient(135deg, #edf7ed, #c3e6cb)",
     borderRadius: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "28px",
-    color: "#2563eb",
+    color: "#35663f",
     margin: "0 auto 20px"
   }
 };

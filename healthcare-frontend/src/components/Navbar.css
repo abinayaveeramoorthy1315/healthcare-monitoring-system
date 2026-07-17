@@ -1,0 +1,19 @@
+.navbar {
+  height: 64px;
+  background: linear-gradient(135deg, #35663f, #528b5e) !important;
+  box-shadow: 0 4px 20px rgba(47, 94, 56, 0.25);
+  border-bottom: 1px solid rgba(255,255,255,.15);
+}
+
+.navbar .container {
+  max-width: 100%;
+  padding: 0 28px;
+}
+
+.navbar-brand {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.3px;
+  font-family: 'Outfit', sans-serif;
+  color: #ffffff !important;
+}

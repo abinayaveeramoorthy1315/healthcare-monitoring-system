@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import VerifyOtp from "./pages/VerifyOtp";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 
 import Sidebar from "./components/Sidebar";
 
@@ -19,11 +23,20 @@ import MyPrescriptions from "./pages/MyPrescriptions";
 import MyVitals from "./pages/MyVitals";
 import PatientReport from "./pages/PatientReport";
 import SymptomChecker from "./components/SymptomChecker";
+import SkinChecker from "./components/SkinChecker";
+import AiPredictionPage from "./pages/AiPredictionPage";
+import Profile from "./pages/Profile";
+import HealthPassport from "./pages/HealthPassport";
+
 import "./App.css";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" />;
+  if (!token) return <Navigate to="/login" />;
+  if (localStorage.getItem("passwordChanged") === "false" && window.location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" />;
+  }
+  return children;
 };
 
 function App() {
@@ -37,6 +50,10 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
         {/* Dashboard */}
         <Route
@@ -207,6 +224,34 @@ function App() {
 } />
 <Route path="/symptom-checker" element={<SymptomChecker />} />
 
+<Route path="/skin-checker" element={<SkinChecker />} />
+
+<Route path="/ai-prediction" element={
+  <ProtectedRoute>
+    <div className="app-container">
+      <Sidebar />
+      <div className="content"><AiPredictionPage /></div>
+    </div>
+  </ProtectedRoute>
+} />
+
+        {/* Profile */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <div className="app-container">
+                <Sidebar />
+                <div className="content">
+                  <Profile />
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Health Passport Full Page */}
+        <Route path="/health-passport/:patientId" element={<HealthPassport />} />
 
         {/* Invalid Routes */}
         <Route path="*" element={<Navigate to="/login" />} />

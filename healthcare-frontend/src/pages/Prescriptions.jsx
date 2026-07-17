@@ -139,20 +139,20 @@ function Prescriptions() {
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 24px; margin-bottom: 28px; }
-            .header h1 { color: #1e40af; font-size: 26px; margin-bottom: 4px; }
+            .header { text-align: center; border-bottom: 3px solid #35663f; padding-bottom: 24px; margin-bottom: 28px; }
+            .header h1 { color: #35663f; font-size: 26px; margin-bottom: 4px; }
             .header p { color: #64748b; font-size: 13px; }
             .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
             .info-box { background: #f8fafc; padding: 16px; border-radius: 8px; }
             .info-label { font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px; }
             .info-value { font-size: 15px; font-weight: 600; color: #0f172a; }
-            .rx-box { border: 2px solid #1e40af; border-radius: 12px; padding: 24px; margin-bottom: 28px; }
-            .rx-title { font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+            .rx-box { border: 2px solid #35663f; border-radius: 12px; padding: 24px; margin-bottom: 28px; }
+            .rx-title { font-size: 18px; font-weight: 700; color: #35663f; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
             .rx-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
             .rx-label { font-weight: 600; color: #475569; width: 130px; font-size: 14px; }
             .rx-value { color: #0f172a; font-size: 14px; flex: 1; }
             .footer { text-align: right; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-            .doctor-sign { font-size: 18px; font-weight: 700; color: #1e40af; }
+            .doctor-sign { font-size: 18px; font-weight: 700; color: #35663f; }
             .disclaimer { font-size: 11px; color: #94a3b8; margin-top: 8px; }
             @media print { body { padding: 20px; } }
           </style>
@@ -496,7 +496,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     padding: "12px 22px",
@@ -504,8 +504,8 @@ const styles = {
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    fontFamily: "'Inter', sans-serif",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)"
+    fontFamily: "'Outfit', sans-serif",
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)"
   },
   cancelHeaderBtn: {
     display: "flex",

@@ -71,7 +71,7 @@ function Doctors() {
         showMessage("Doctor updated successfully!", "success");
       } else {
         await addDoctor(doctorData);
-        showMessage("Doctor added successfully!", "success");
+        showMessage("Doctor added successfully! Login credentials (username & temporary password) have been sent to " + (doctorData.email || "the doctor's email"), "success");
       }
       resetForm();
       loadDoctors();
@@ -125,7 +125,7 @@ function Doctors() {
       "general": "#64748b"
     };
     const key = spec?.toLowerCase() || "";
-    return Object.entries(colors).find(([k]) => key.includes(k))?.[1] || "#2563eb";
+    return Object.entries(colors).find(([k]) => key.includes(k))?.[1] || "#35663f";
   };
 
   const getAvailabilityConfig = (avail) => {
@@ -456,7 +456,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     padding: "12px 22px",
@@ -464,8 +464,8 @@ const styles = {
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
-    fontFamily: "'Inter', sans-serif"
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)",
+    fontFamily: "'Outfit', sans-serif"
   },
   cancelHeaderBtn: {
     display: "flex",
@@ -687,7 +687,7 @@ const styles = {
     color: "#475569"
   },
   emailText: {
-    color: "#2563eb",
+    color: "#35663f",
     fontSize: "13px"
   },
   availBadge: {

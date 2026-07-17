@@ -592,7 +592,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     padding: "12px 22px",
@@ -600,8 +600,8 @@ const styles = {
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
-    fontFamily: "'Inter', sans-serif"
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)",
+    fontFamily: "'Outfit', sans-serif"
   },
   cancelHeaderBtn: {
     display: "flex",

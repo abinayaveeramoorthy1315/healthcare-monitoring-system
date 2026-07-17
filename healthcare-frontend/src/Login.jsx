@@ -27,6 +27,15 @@ export default function Login() {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.role);
       localStorage.setItem("username", username);
+      localStorage.setItem("passwordChanged", res.data.passwordChanged !== undefined ? res.data.passwordChanged : true);
+      if (res.data.email) {
+        localStorage.setItem("userEmail", res.data.email);
+      }
+
+      if (res.data.passwordChanged === false) {
+        window.location.href = "/change-password";
+        return;
+      }
 
       if (res.data.role === "PATIENT") {
         try {
@@ -159,6 +168,12 @@ export default function Login() {
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-4px", marginBottom: "14px" }}>
+              <Link to="/forgot-password" style={{ color: "#38bdf8", fontSize: "13px", fontWeight: "600", textDecoration: "none" }}>
+                Forgot Password?
+              </Link>
             </div>
 
             <button

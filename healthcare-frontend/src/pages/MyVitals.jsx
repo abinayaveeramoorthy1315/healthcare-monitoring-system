@@ -148,11 +148,11 @@ function MyVitals() {
 
                   <div style={styles.statItem}>
                     <div style={styles.statIcon}>
-                      <FaTint style={{ color: "#2563eb" }} />
+                      <FaTint style={{ color: "#35663f" }} />
                     </div>
                     <div>
                       <p style={styles.statLabel}>Blood Pressure</p>
-                      <p style={{ ...styles.statValue, color: "#2563eb" }}>
+                      <p style={{ ...styles.statValue, color: "#35663f" }}>
                         {v.bloodPressure || "-"} <span style={styles.statUnit}>mmHg</span>
                       </p>
                     </div>
@@ -172,8 +172,8 @@ const styles = {
   wrapper: {
     padding: "28px 32px",
     minHeight: "100vh",
-    background: "#f1f5f9",
-    fontFamily: "'Inter', sans-serif"
+    background: "#edf7ed",
+    fontFamily: "'Outfit', sans-serif"
   },
   pageHeader: {
     display: "flex",
@@ -188,32 +188,32 @@ const styles = {
   headerIcon: {
     width: "52px",
     height: "52px",
-    background: "linear-gradient(135deg, #dc2626, #ef4444)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "22px",
     color: "white",
-    boxShadow: "0 4px 12px rgba(220,38,38,0.3)"
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)"
   },
   pageTitle: {
     fontSize: "24px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: "#1a3323",
     margin: 0
   },
   pageSubtitle: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "#5c7564",
     margin: "2px 0 0"
   },
   vitalCard: {
     background: "white",
     borderRadius: "16px",
     padding: "20px 24px",
-    boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
-    border: "1px solid #e2e8f0"
+    boxShadow: "0 16px 40px rgba(27,58,38,0.08)",
+    border: "1px solid rgba(82,139,94,0.2)"
   },
   cardTop: {
     display: "flex",
@@ -237,11 +237,11 @@ const styles = {
     alignItems: "center",
     gap: "6px",
     fontSize: "13px",
-    color: "#64748b"
+    color: "#5c7564"
   },
   recordNum: {
     fontSize: "12px",
-    color: "#94a3b8",
+    color: "#82c08e",
     fontWeight: "600"
   },
   statsRow: {
@@ -274,12 +274,12 @@ const styles = {
   statDivider: {
     width: "1px",
     height: "50px",
-    background: "#e2e8f0",
+    background: "rgba(82,139,94,0.15)",
     flexShrink: 0
   },
   statLabel: {
     fontSize: "11px",
-    color: "#94a3b8",
+    color: "#5c7564",
     fontWeight: "600",
     letterSpacing: "0.5px",
     textTransform: "uppercase",
@@ -293,7 +293,7 @@ const styles = {
   statUnit: {
     fontSize: "12px",
     fontWeight: "400",
-    color: "#94a3b8"
+    color: "#82c08e"
   },
   loadingState: {
     display: "flex",
@@ -301,13 +301,13 @@ const styles = {
     alignItems: "center",
     padding: "60px",
     gap: "16px",
-    color: "#64748b"
+    color: "#5c7564"
   },
   spinner: {
     width: "36px",
     height: "36px",
-    border: "3px solid #e2e8f0",
-    borderTopColor: "#ef4444",
+    border: "3px solid rgba(82,139,94,0.2)",
+    borderTopColor: "#528b5e",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite"
   },
@@ -316,18 +316,18 @@ const styles = {
     borderRadius: "20px",
     textAlign: "center",
     padding: "60px 24px",
-    border: "1px solid #e2e8f0"
+    border: "1px solid rgba(82,139,94,0.2)"
   },
   emptyIcon: {
     width: "72px",
     height: "72px",
-    background: "linear-gradient(135deg, #fee2e2, #fecaca)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     borderRadius: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "28px",
-    color: "#dc2626",
+    color: "white",
     margin: "0 auto 20px"
   }
 };

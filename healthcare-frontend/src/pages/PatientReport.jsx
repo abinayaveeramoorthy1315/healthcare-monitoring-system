@@ -62,7 +62,7 @@ function PatientReport() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    doc.setFillColor(26, 60, 94);
+    doc.setFillColor(53, 102, 63);
     doc.rect(0, 0, pageWidth, 35, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
@@ -78,16 +78,16 @@ function PatientReport() {
     doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 42);
     doc.text(`Report ID: RPT-${Date.now()}`, pageWidth - 14, 42, { align: "right" });
 
-    doc.setDrawColor(26, 60, 94);
+    doc.setDrawColor(53, 102, 63);
     doc.setLineWidth(0.5);
     doc.line(14, 45, pageWidth - 14, 45);
 
-    doc.setTextColor(26, 60, 94);
+    doc.setTextColor(26, 51, 35);
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.text("Patient Information", 14, 54);
 
-    doc.setFillColor(240, 245, 255);
+    doc.setFillColor(237, 247, 237);
     doc.rect(14, 57, pageWidth - 28, 32, "F");
 
     doc.setTextColor(50, 50, 50);
@@ -131,7 +131,7 @@ function PatientReport() {
 
     if (vitals.length > 0) {
       const latest = vitals[vitals.length - 1];
-      doc.setTextColor(26, 60, 94);
+      doc.setTextColor(26, 51, 35);
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
       doc.text("Latest Vitals Summary", 14, yPos);
@@ -142,7 +142,7 @@ function PatientReport() {
         { label: "Heart Rate", value: `${latest.heartRate} bpm`, color: [239, 68, 68] },
         { label: "Oxygen Level", value: `${latest.oxygenLevel}%`, color: [34, 197, 94] },
         { label: "Temperature", value: `${latest.temperature}°C`, color: [245, 158, 11] },
-        { label: "Blood Pressure", value: latest.bloodPressure || "-", color: [37, 99, 235] }
+        { label: "Blood Pressure", value: latest.bloodPressure || "-", color: [82, 139, 94] }
       ];
 
       vitalsData.forEach((v, i) => {
@@ -173,7 +173,7 @@ function PatientReport() {
       yPos += 14;
     }
 
-    doc.setTextColor(26, 60, 94);
+    doc.setTextColor(26, 51, 35);
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.text("Appointments History", 14, yPos);
@@ -187,9 +187,9 @@ function PatientReport() {
           i + 1, a.doctor?.doctorName || "-",
           a.appointmentDate || "-", a.appointmentTime || "-", a.status || "-"
         ]),
-        headStyles: { fillColor: [26, 60, 94], textColor: 255, fontSize: 9, fontStyle: "bold" },
+        headStyles: { fillColor: [53, 102, 63], textColor: 255, fontSize: 9, fontStyle: "bold" },
         bodyStyles: { fontSize: 9, textColor: [50, 50, 50] },
-        alternateRowStyles: { fillColor: [240, 245, 255] },
+        alternateRowStyles: { fillColor: [237, 247, 237] },
         margin: { left: 14, right: 14 }
       });
       yPos = doc.lastAutoTable.finalY + 10;
@@ -200,7 +200,7 @@ function PatientReport() {
       yPos += 14;
     }
 
-    doc.setTextColor(26, 60, 94);
+    doc.setTextColor(26, 51, 35);
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.text("Prescriptions", 14, yPos);
@@ -229,7 +229,7 @@ function PatientReport() {
 
     if (vitals.length > 0) {
       if (yPos > 220) { doc.addPage(); yPos = 20; }
-      doc.setTextColor(26, 60, 94);
+      doc.setTextColor(26, 51, 35);
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
       doc.text("Vitals History", 14, yPos);
@@ -243,9 +243,9 @@ function PatientReport() {
           `${v.temperature}°C`, v.bloodPressure || "-", v.riskLevel || "NORMAL",
           v.recordedAt ? new Date(v.recordedAt).toLocaleDateString() : "-"
         ]),
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 9, fontStyle: "bold" },
+        headStyles: { fillColor: [82, 139, 94], textColor: 255, fontSize: 9, fontStyle: "bold" },
         bodyStyles: { fontSize: 9, textColor: [50, 50, 50] },
-        alternateRowStyles: { fillColor: [240, 245, 255] },
+        alternateRowStyles: { fillColor: [237, 247, 237] },
         margin: { left: 14, right: 14 }
       });
     }
@@ -379,8 +379,8 @@ const styles = {
   wrapper: {
     padding: "28px 32px",
     minHeight: "100vh",
-    background: "#f1f5f9",
-    fontFamily: "'Inter', sans-serif",
+    background: "#edf7ed",
+    fontFamily: "'Outfit', sans-serif",
     maxWidth: "800px"
   },
   pageHeader: {
@@ -392,32 +392,32 @@ const styles = {
   headerIcon: {
     width: "52px",
     height: "52px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "22px",
     color: "white",
-    boxShadow: "0 4px 12px rgba(37,99,235,0.3)"
+    boxShadow: "0 4px 12px rgba(82,139,94,0.3)"
   },
   pageTitle: {
     fontSize: "24px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: "#1a3323",
     margin: 0
   },
   pageSubtitle: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "#5c7564",
     margin: "2px 0 0"
   },
   summaryCard: {
     background: "white",
     borderRadius: "20px",
     padding: "28px",
-    boxShadow: "0 4px 20px rgba(15,23,42,0.06)",
-    border: "1px solid #e2e8f0",
+    boxShadow: "0 16px 40px rgba(27,58,38,0.08)",
+    border: "1px solid rgba(82,139,94,0.2)",
     marginBottom: "24px"
   },
   summaryTop: {
@@ -426,13 +426,13 @@ const styles = {
     gap: "16px",
     marginBottom: "24px",
     paddingBottom: "24px",
-    borderBottom: "1px solid #f1f5f9"
+    borderBottom: "1px solid rgba(82,139,94,0.12)"
   },
   patientAvatar: {
     width: "60px",
     height: "60px",
     borderRadius: "16px",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -444,7 +444,7 @@ const styles = {
   patientName: {
     fontSize: "20px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: "#1a3323",
     margin: "0 0 8px"
   },
   patientMeta: {
@@ -456,12 +456,13 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "5px",
-    background: "#f1f5f9",
-    color: "#475569",
+    background: "#f8fafc",
+    color: "#5c7564",
     padding: "4px 10px",
     borderRadius: "20px",
     fontSize: "12px",
-    fontWeight: "600"
+    fontWeight: "600",
+    border: "1px solid rgba(82,139,94,0.15)"
   },
   statsRow: {
     display: "grid",
@@ -474,7 +475,8 @@ const styles = {
     gap: "12px",
     background: "#f8fafc",
     padding: "14px 16px",
-    borderRadius: "12px"
+    borderRadius: "12px",
+    border: "1px solid rgba(82,139,94,0.1)"
   },
   statIconWrap: {
     width: "36px",
@@ -491,20 +493,20 @@ const styles = {
   statNum: {
     fontSize: "20px",
     fontWeight: "800",
-    color: "#0f172a",
+    color: "#1a3323",
     margin: 0,
     lineHeight: 1
   },
   statLbl: {
     fontSize: "11px",
-    color: "#94a3b8",
+    color: "#82c08e",
     margin: "2px 0 0"
   },
   downloadBtn: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    background: "linear-gradient(135deg, #1e40af, #2563eb)",
+    background: "linear-gradient(135deg, #35663f, #528b5e)",
     color: "white",
     border: "none",
     padding: "15px 32px",
@@ -512,12 +514,12 @@ const styles = {
     fontSize: "15px",
     fontWeight: "700",
     cursor: "pointer",
-    fontFamily: "'Inter', sans-serif",
-    boxShadow: "0 8px 20px rgba(37,99,235,0.3)"
+    fontFamily: "'Outfit', sans-serif",
+    boxShadow: "0 8px 20px rgba(82,139,94,0.3)"
   },
   note: {
     marginTop: "12px",
-    color: "#94a3b8",
+    color: "#82c08e",
     fontSize: "13px"
   },
   loadingState: {
@@ -526,13 +528,13 @@ const styles = {
     alignItems: "center",
     padding: "80px",
     gap: "16px",
-    color: "#64748b"
+    color: "#5c7564"
   },
   spinner: {
     width: "40px",
     height: "40px",
-    border: "3px solid #e2e8f0",
-    borderTopColor: "#2563eb",
+    border: "3px solid rgba(82,139,94,0.2)",
+    borderTopColor: "#528b5e",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite"
   },
