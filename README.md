@@ -309,7 +309,6 @@ application.properties
 
 Bachelor of Engineering
 
-Final Year Project
 
 ---
 
